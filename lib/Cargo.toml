@@ -1,0 +1,16 @@
+[package]
+name = "toml-example"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+categories.workspace = true
+keywords.workspace = true
+repository.workspace = true
+description.workspace = true
+license.workspace = true
+readme.workspace = true
+
+[dependencies]
+toml-example-derive = { version = "=0.0.1", path = "../derive" }
+
+[dev-dependencies]

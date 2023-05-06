@@ -1,0 +1,16 @@
+[workspace]
+members = [
+    "lib",
+    "derive",
+]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2021"
+authors = ["Antonio Yang <yanganto@gmail.com>"]
+license = "MIT"
+description = "A lib help generate toml example"
+repository = "https://github.com/yanganto/toml-example"
+keywords = ["toml", "example", "document"]
+categories = [ "parser-implementations", "parsing", "config" ]
+readme = "README.md"
