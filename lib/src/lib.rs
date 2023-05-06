@@ -5,16 +5,27 @@ pub use traits::*;
 
 #[cfg(test)]
 mod tests {
-    use toml_example::TomlExample;
     use crate as toml_example;
+    use toml_example::TomlExample;
 
     #[test]
     fn basic() {
         #[derive(TomlExample)]
+        #[allow(dead_code)]
         struct Config {
-            _a: usize,
-            _b: String,
+            /// Config.a should be a number
+            a: usize,
+            /// Config.b should be a string
+            b: String,
         }
-        assert_eq!(Config::to_example(), "# Toml example for Config".to_string());
+        assert_eq!(
+            Config::toml_example(),
+            r#"# Config.a should be a number
+a = 0
+# Config.b should be a string
+b = ""
+"#
+            .to_string()
+        );
     }
 }
