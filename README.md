@@ -35,7 +35,7 @@ let doc = Config::toml_example();
 ## Will do later
 - handle Option
 - handle Vec
-- use stucture doc for example header
+- use structure doc for example header
 - optional the example header
 - nestring structure
 - function to write example file, `to_toml_example(file_name)`
