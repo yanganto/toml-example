@@ -1,4 +1,4 @@
-# Struct Patch
+# Toml Example
 [![Crates.io][crates-badge]][crate-url]
 [![MIT licensed][mit-badge]][mit-url]
 [![Docs][doc-badge]][doc-url]
