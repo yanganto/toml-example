@@ -4,9 +4,9 @@ use proc_macro::TokenStream;
 use proc_macro_error::{abort, proc_macro_error};
 use quote::quote;
 use syn::{
-    AngleBracketedGenericArguments, AttrStyle::Outer, Expr::Lit, ExprLit, Field, Fields::Named,
-    GenericArgument, Lit::Str, Meta::NameValue, MetaNameValue, PathArguments, PathSegment, Type,
-    TypePath,
+    AngleBracketedGenericArguments, AttrStyle::Outer, Attribute, Expr::Lit, ExprLit, Field,
+    Fields::Named, GenericArgument, Lit::Str, Meta::NameValue, MetaNameValue, PathArguments,
+    PathSegment, Type, TypePath,
 };
 
 fn default_value(ty: String) -> String {
@@ -56,11 +56,9 @@ fn parse_type(ty: &Type, default: &mut Option<String>, optional: &mut bool) {
     }
 }
 
-fn get_default_and_doc_from_field(field: &Field) -> (Option<String>, Option<String>, bool) {
-    let mut doc = None;
-    let mut default = None;
-    let mut optional = false;
-    for attr in field.attrs.iter() {
+fn parse_docs(attrs: &Vec<Attribute>) -> Vec<String> {
+    let mut docs = Vec::new();
+    for attr in attrs.iter() {
         match (attr.style, &attr.meta) {
             (Outer, NameValue(MetaNameValue { path, value, .. })) => {
                 for seg in path.segments.iter() {
@@ -69,7 +67,7 @@ fn get_default_and_doc_from_field(field: &Field) -> (Option<String>, Option<Stri
                             lit: Str(lit_str), ..
                         }) = value
                         {
-                            doc = Some(lit_str.value());
+                            docs.push(lit_str.value());
                         }
                     }
                 }
@@ -77,8 +75,31 @@ fn get_default_and_doc_from_field(field: &Field) -> (Option<String>, Option<Stri
             _ => (),
         }
     }
+    docs
+}
+
+fn get_default_and_doc_from_field(field: &Field) -> (Option<String>, Vec<String>, bool) {
+    let mut default = None;
+    let mut optional = false;
     parse_type(&field.ty, &mut default, &mut optional);
-    (default.map(|s| s.to_string()), doc, optional)
+    (
+        default.map(|s| s.to_string()),
+        parse_docs(&field.attrs),
+        optional,
+    )
+}
+
+fn push_doc_string(example: &mut String, docs: Vec<String>, paragraph: bool) {
+    let has_docs = !docs.is_empty();
+    for doc in docs.into_iter() {
+        example.push('#');
+        example.push_str(&doc);
+        example.push('\n');
+    }
+
+    if has_docs && paragraph {
+        example.push('\n');
+    }
 }
 
 #[proc_macro_derive(TomlExample)]
@@ -87,6 +108,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(item as syn::DeriveInput);
     let struct_name = &input.ident;
     let mut example = String::new();
+    push_doc_string(&mut example, parse_docs(&input.attrs), true);
 
     let fields = if let syn::Data::Struct(syn::DataStruct { fields, .. }) = &input.data {
         fields
@@ -97,12 +119,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
         for f in fields_named.named.iter() {
             if let Some(field_name) = f.ident.as_ref().map(|i| i.to_string()) {
                 let (default, doc_str, optional) = get_default_and_doc_from_field(&f);
-
-                if let Some(doc_str) = doc_str {
-                    example.push('#');
-                    example.push_str(&doc_str);
-                    example.push('\n');
-                }
+                push_doc_string(&mut example, doc_str, false);
 
                 if optional {
                     example.push_str("# ");

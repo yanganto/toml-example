@@ -14,6 +14,8 @@ Deriving `TomlExample` on a struct will provide `to_example` function help gener
 ```rust 
 use toml_example::TomlExample;
 
+/// Config is to arrange something or change the controls on a computer or other device
+/// so that it can be used in a particular way
 #[derive(TomlExample)]
 struct Config {
     /// Config.a should be a number
@@ -25,22 +27,25 @@ struct Config {
     /// Config.d is a list of number
     d: Vec<usize>,
 }
-let doc = Config::toml_example();
+let example = Config::toml_example();
+```
 
-// doc is String toml example base on the docstring
+Toml example base on the doc string of each field
+```toml
+# Config is to arrange something or change the controls on a computer or other device
+# so that it can be used in a particular way
 
-// # Config.a should be a number
-// a = 0
-// # Config.b should be a string
-// b = ""
-// # Optional Config.c is a number
-// # c = 0
-// # Config.d is a list of number
-// # d = [ 0, ]
+# Config.a should be a number
+a = 0
+# Config.b should be a string
+b = ""
+# Optional Config.c is a number
+# c = 0
+# Config.d is a list of number
+# d = [ 0, ]
 ```
 
 ## Will do later
-- use structure doc for example header
 - nesting structure
 - use `#[serde(default = "default_resource")]` for example
 - function to write example file, `to_toml_example(file_name)`
