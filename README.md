@@ -21,7 +21,9 @@ struct Config {
     /// Config.b should be a string
     b: String,
     /// Optional Config.c is a number
-    c: usize,
+    c: Option<usize>,
+    /// Config.d is a list of number
+    d: Vec<usize>,
 }
 let doc = Config::toml_example();
 
@@ -32,13 +34,13 @@ let doc = Config::toml_example();
 // # Config.b should be a string
 // b = ""
 // # Optional Config.c is a number
-// c = 0
-
+// # c = 0
+// # Config.d is a list of number
+// # d = [ 0, ]
 ```
 
 ## Will do later
 - use structure doc for example header
-- handle Vec
 - nesting structure
 - use `#[serde(default = "default_resource")]` for example
 - function to write example file, `to_toml_example(file_name)`
