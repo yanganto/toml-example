@@ -56,4 +56,25 @@ b = ""
             Config::default()
         )
     }
+
+    #[test]
+    fn vec() {
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Config {
+            /// Config.a is a list of number
+            a: Vec<usize>,
+            /// Config.b is a list of string
+            b: Vec<String>,
+        }
+        assert_eq!(
+            Config::toml_example(),
+            r#"# Config.a is a list of number
+a = [ 0, ]
+# Config.b is a list of string
+b = [ "", ]
+"#
+        );
+        assert!(toml::from_str::<Config>(Config::toml_example()).is_ok())
+    }
 }
