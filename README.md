@@ -46,7 +46,6 @@ b = ""
 ```
 
 ## Will do later
-- use structure doc for example header
 - nesting structure
 - use `#[serde(default = "default_resource")]` for example
 - function to write example file, `to_toml_example(file_name)`
