@@ -115,7 +115,6 @@ a = 0
 
     #[test]
     fn serde_default() {
-
         fn default_a() -> usize {
             7
         }
