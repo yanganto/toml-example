@@ -20,6 +20,8 @@ struct Config {
     a: usize,
     /// Config.b should be a string
     b: String,
+    /// Optional Config.c is a number
+    c: usize,
 }
 let doc = Config::toml_example();
 
@@ -29,15 +31,16 @@ let doc = Config::toml_example();
 // a = 0
 // # Config.b should be a string
 // b = ""
+// # Optional Config.c is a number
+// c = 0
 
 ```
 
 ## Will do later
-- handle Option
-- handle Vec
 - use structure doc for example header
-- optional the example header
-- nestring structure
+- handle Vec
+- nesting structure
+- use `#[serde(default = "default_resource")]` for example
 - function to write example file, `to_toml_example(file_name)`
 
 [crates-badge]: https://img.shields.io/crates/v/toml-example.svg

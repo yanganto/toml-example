@@ -25,7 +25,26 @@ a = 0
 # Config.b should be a string
 b = ""
 "#
-            .to_string()
+        );
+    }
+
+    #[test]
+    fn option() {
+        #[derive(TomlExample)]
+        #[allow(dead_code)]
+        struct Config {
+            /// Config.a should be a number
+            a: Option<usize>,
+            /// Config.b is optional string
+            b: Option<String>,
+        }
+        assert_eq!(
+            Config::toml_example(),
+            r#"# Config.a should be a number
+# a = 0
+# Config.b is optional string
+# b = ""
+"#
         );
     }
 }
