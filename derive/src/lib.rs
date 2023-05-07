@@ -32,7 +32,22 @@ fn parse_type(ty: &Type, default: &mut Option<String>, optional: &mut bool) {
                 }) = arguments
                 {
                     if let Some(GenericArgument::Type(ty)) = args.first() {
-                        parse_type(&ty, default, optional);
+                        parse_type(&ty, default, &mut false);
+                    }
+                }
+            } else if id == "Vec" {
+                if let PathArguments::AngleBracketed(AngleBracketedGenericArguments {
+                    args, ..
+                }) = arguments
+                {
+                    if let Some(GenericArgument::Type(ty)) = args.first() {
+                        let mut item_default = None;
+                        parse_type(&ty, &mut item_default, &mut false);
+                        *default = if let Some(item_default) = item_default {
+                            Some(format!("[ {item_default:}, ]"))
+                        } else {
+                            Some(format!("[  ]"))
+                        }
                     }
                 }
             }
