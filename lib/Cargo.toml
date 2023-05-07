@@ -11,7 +11,7 @@ license.workspace = true
 readme.workspace = true
 
 [dependencies]
-toml-example-derive = { version = "=0.3", path = "../derive" }
+toml-example-derive = { version = "=0.4", path = "../derive" }
 
 [dev-dependencies]
 serde = { version = "1.0", features = ["derive"] }

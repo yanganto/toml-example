@@ -85,4 +85,31 @@ c = [ 0, ]
         );
         assert!(toml::from_str::<Config>(Config::toml_example()).is_ok())
     }
+
+    #[test]
+    fn sturct_doc() {
+        /// Config is to arrange something or change the controls on a computer or other device
+        /// so that it can be used in a particular way
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Config {
+            /// Config.a should be a number
+            /// the number should be greater or equal zero
+            a: usize,
+        }
+        assert_eq!(
+            Config::toml_example(),
+            r#"# Config is to arrange something or change the controls on a computer or other device
+# so that it can be used in a particular way
+
+# Config.a should be a number
+# the number should be greater or equal zero
+a = 0
+"#
+        );
+        assert_eq!(
+            toml::from_str::<Config>(Config::toml_example()).unwrap(),
+            Config::default()
+        )
+    }
 }
