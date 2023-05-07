@@ -112,4 +112,47 @@ a = 0
             Config::default()
         )
     }
+
+    #[test]
+    fn serde_default() {
+
+        fn default_a() -> usize {
+            7
+        }
+        fn default_b() -> String {
+            "default".into()
+        }
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Config {
+            /// Config.a should be a number
+            #[serde(default = "default_a")]
+            a: usize,
+            /// Config.b should be a string
+            #[serde(default = "default_b")]
+            b: String,
+            /// Config.c should be a number
+            #[serde(default)]
+            c: usize,
+            /// Config.d should be a string
+            #[serde(default)]
+            d: String,
+        }
+        assert_eq!(
+            Config::toml_example(),
+            r#"# Config.a should be a number
+a = 7
+# Config.b should be a string
+b = "default"
+# Config.c should be a number
+c = 0
+# Config.d should be a string
+d = ""
+"#
+        );
+        assert_eq!(
+            toml::from_str::<Config>(Config::toml_example()).unwrap(),
+            Config::default()
+        )
+    }
 }
