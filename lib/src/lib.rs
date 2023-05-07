@@ -6,11 +6,12 @@ pub use traits::*;
 #[cfg(test)]
 mod tests {
     use crate as toml_example;
+    use serde_derive::Deserialize;
     use toml_example::TomlExample;
 
     #[test]
     fn basic() {
-        #[derive(TomlExample)]
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
         #[allow(dead_code)]
         struct Config {
             /// Config.a should be a number
@@ -26,25 +27,33 @@ a = 0
 b = ""
 "#
         );
+        assert_eq!(
+            toml::from_str::<Config>(Config::toml_example()).unwrap(),
+            Config::default()
+        )
     }
 
     #[test]
     fn option() {
-        #[derive(TomlExample)]
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
         #[allow(dead_code)]
         struct Config {
-            /// Config.a should be a number
+            /// Config.a is an optional number
             a: Option<usize>,
-            /// Config.b is optional string
+            /// Config.b is an optional string
             b: Option<String>,
         }
         assert_eq!(
             Config::toml_example(),
-            r#"# Config.a should be a number
+            r#"# Config.a is an optional number
 # a = 0
-# Config.b is optional string
+# Config.b is an optional string
 # b = ""
 "#
         );
+        assert_eq!(
+            toml::from_str::<Config>(Config::toml_example()).unwrap(),
+            Config::default()
+        )
     }
 }
