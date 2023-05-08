@@ -118,16 +118,12 @@ fn get_default_and_doc_from_field(field: &Field) -> (DefaultSource, Vec<String>,
     let mut optional = false;
     let (docs, default_source) = parse_doc_default_attrs(&field.attrs);
     let ty = parse_type(&field.ty, &mut default_value, &mut optional);
-    let default_source  = match default_source {
+    let default_source = match default_source {
         Some(DefaultSource::DefaultFn(_)) => DefaultSource::DefaultFn(ty),
         Some(DefaultSource::SerdeDefaultFn(f)) => DefaultSource::SerdeDefaultFn(f),
         _ => DefaultSource::DefaultValue(default_value),
     };
-    (
-        default_source,
-        docs,
-        optional,
-    )
+    (default_source, docs, optional)
 }
 
 fn push_doc_string(example: &mut String, docs: Vec<String>, paragraph: bool) {
