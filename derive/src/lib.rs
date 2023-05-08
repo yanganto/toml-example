@@ -47,7 +47,7 @@ fn parse_type(ty: &Type, default: &mut String, optional: &mut bool) -> Option<St
                 }) = arguments
                 {
                     if let Some(GenericArgument::Type(ty)) = args.first() {
-                        parse_type(&ty, default, &mut false);
+                        parse_type(ty, default, &mut false);
                     }
                 }
             } else if id == "Vec" {
@@ -57,9 +57,9 @@ fn parse_type(ty: &Type, default: &mut String, optional: &mut bool) -> Option<St
                 {
                     if let Some(GenericArgument::Type(ty)) = args.first() {
                         let mut item_default_value = String::new();
-                        parse_type(&ty, &mut item_default_value, &mut false);
+                        parse_type(ty, &mut item_default_value, &mut false);
                         *default = if item_default_value.is_empty() {
-                            format!("[  ]")
+                            "[  ]".to_string()
                         } else {
                             format!("[ {item_default_value:}, ]")
                         }
@@ -72,14 +72,14 @@ fn parse_type(ty: &Type, default: &mut String, optional: &mut bool) -> Option<St
     r#type
 }
 
-fn parse_doc_default_attrs(attrs: &Vec<Attribute>) -> (Vec<String>, Option<DefaultSource>) {
+fn parse_doc_default_attrs(attrs: &[Attribute]) -> (Vec<String>, Option<DefaultSource>) {
     let mut docs = Vec::new();
     let mut default_source = None;
     for attr in attrs.iter() {
         match (attr.style, &attr.meta) {
             (Outer, NameValue(MetaNameValue { path, value, .. })) => {
                 for seg in path.segments.iter() {
-                    if seg.ident.to_string() == "doc" {
+                    if seg.ident == "doc" {
                         if let Lit(ExprLit {
                             lit: Str(lit_str), ..
                         }) = value
@@ -93,9 +93,8 @@ fn parse_doc_default_attrs(attrs: &Vec<Attribute>) -> (Vec<String>, Option<Defau
                 if path
                     .segments
                     .last()
-                    .map(|s| s.ident.to_string() == "serde")
-                    .unwrap_or_default()
-                    == true =>
+                    .map(|s| s.ident == "serde")
+                    .unwrap_or_default() =>
             {
                 let token_str = tokens.to_string();
                 if token_str.starts_with("default") {
@@ -155,7 +154,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
     if let Named(fields_named) = fields {
         for f in fields_named.named.iter() {
             if let Some(field_name) = f.ident.as_ref().map(|i| i.to_string()) {
-                let (default, doc_str, optional) = get_default_and_doc_from_field(&f);
+                let (default, doc_str, optional) = get_default_and_doc_from_field(f);
                 push_doc_string(&mut example, doc_str, false);
 
                 if optional {
@@ -165,7 +164,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                     DefaultSource::DefaultValue(default) => {
                         example.push_str(&field_name);
                         example.push_str(" = ");
-                        example.push_str(&default.replace("\\", "\\\\").replace("\"", "\\\""));
+                        example.push_str(&default.replace('\\', "\\\\").replace('\"', "\\\""));
                         example.push('\n');
                     }
                     DefaultSource::DefaultFn(None) => {
@@ -182,7 +181,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                         example.push_str(&field_name);
                         example.push_str(" = \".to_string()");
                         example.push_str(&format!(" + &format!(\"{{:?}}\",  {fn_str}())"));
-                        example.push_str(&"+ &\"\n");
+                        example.push_str("+ &\"\n");
                     }
                 }
             }

@@ -39,6 +39,8 @@ fn default_int() -> usize {
 fn default_str() -> String {
     "default".into()
 }
+
+Config::to_toml_example("example.toml");  // write example to a file
 let example = Config::toml_example();
 ```
 
@@ -63,7 +65,6 @@ f = "default"
 
 ## Will do later
 - nesting structure
-- function to write example file, `to_toml_example(file_name)`
 
 [crates-badge]: https://img.shields.io/crates/v/toml-example.svg
 [crate-url]: https://crates.io/crates/toml-example

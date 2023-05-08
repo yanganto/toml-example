@@ -30,7 +30,18 @@ b = ""
         assert_eq!(
             toml::from_str::<Config>(&Config::toml_example()).unwrap(),
             Config::default()
-        )
+        );
+        let mut tmp_file = std::env::temp_dir();
+        tmp_file.push("config.toml");
+        Config::to_toml_example(&tmp_file.as_path().to_str().unwrap()).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(tmp_file).unwrap(),
+            r#"# Config.a should be a number
+a = 0
+# Config.b should be a string
+b = ""
+"#
+        );
     }
 
     #[test]
