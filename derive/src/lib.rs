@@ -18,7 +18,7 @@ use syn::{
 
 enum DefaultSource {
     DefaultValue(String),
-    DefaultFn,
+    DefaultFn(Option<String>),
     SerdeDefaultFn(String),
 }
 
@@ -32,11 +32,13 @@ fn default_value(ty: String) -> String {
     .to_string()
 }
 
-fn parse_type(ty: &Type, default: &mut String, optional: &mut bool) {
+fn parse_type(ty: &Type, default: &mut String, optional: &mut bool) -> Option<String> {
+    let mut r#type = None;
     if let Type::Path(TypePath { path, .. }) = ty {
         if let Some(PathSegment { ident, arguments }) = path.segments.last() {
             let id = ident.to_string();
             if arguments.is_none() {
+                r#type = Some(id.clone());
                 *default = default_value(id);
             } else if id == "Option" {
                 *optional = true;
@@ -67,6 +69,7 @@ fn parse_type(ty: &Type, default: &mut String, optional: &mut bool) {
             // TODO else Complex struct in else
         }
     }
+    r#type
 }
 
 fn parse_doc_default_attrs(attrs: &Vec<Attribute>) -> (Vec<String>, Option<DefaultSource>) {
@@ -100,7 +103,7 @@ fn parse_doc_default_attrs(attrs: &Vec<Attribute>) -> (Vec<String>, Option<Defau
                         default_source =
                             Some(DefaultSource::SerdeDefaultFn(s.1.trim_matches('"').into()));
                     } else {
-                        default_source = Some(DefaultSource::DefaultFn);
+                        default_source = Some(DefaultSource::DefaultFn(None));
                     }
                 }
             }
@@ -114,9 +117,14 @@ fn get_default_and_doc_from_field(field: &Field) -> (DefaultSource, Vec<String>,
     let mut default_value = String::new();
     let mut optional = false;
     let (docs, default_source) = parse_doc_default_attrs(&field.attrs);
-    parse_type(&field.ty, &mut default_value, &mut optional);
+    let ty = parse_type(&field.ty, &mut default_value, &mut optional);
+    let default_source  = match default_source {
+        Some(DefaultSource::DefaultFn(_)) => DefaultSource::DefaultFn(ty),
+        Some(DefaultSource::SerdeDefaultFn(f)) => DefaultSource::SerdeDefaultFn(f),
+        _ => DefaultSource::DefaultValue(default_value),
+    };
     (
-        default_source.unwrap_or(DefaultSource::DefaultValue(default_value)),
+        default_source,
         docs,
         optional,
     )
@@ -140,7 +148,7 @@ fn push_doc_string(example: &mut String, docs: Vec<String>, paragraph: bool) {
 pub fn derive_patch(item: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(item as syn::DeriveInput);
     let struct_name = &input.ident;
-    let mut example = String::new();
+    let mut example = "\"".to_string();
     push_doc_string(&mut example, parse_doc_default_attrs(&input.attrs).0, true);
 
     let fields = if let syn::Data::Struct(syn::DataStruct { fields, .. }) = &input.data {
@@ -161,30 +169,37 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                     DefaultSource::DefaultValue(default) => {
                         example.push_str(&field_name);
                         example.push_str(" = ");
-                        example.push_str(&default);
+                        example.push_str(&default.replace("\\", "\\\\").replace("\"", "\\\""));
+                        example.push('\n');
                     }
-                    DefaultSource::DefaultFn => {
-                        // TODO
-                        println!("handle `{field_name}::default()`");
+                    DefaultSource::DefaultFn(None) => {
                         example.push_str(&field_name);
-                        example.push_str(" = \"\"");
+                        example.push_str(" = \"\"\n");
+                    }
+                    DefaultSource::DefaultFn(Some(ty)) => {
+                        example.push_str(&field_name);
+                        example.push_str(" = \".to_string()");
+                        example.push_str(&format!(" + &format!(\"{{:?}}\",  {ty}::default())"));
+                        example.push_str(" + &\"\n");
                     }
                     DefaultSource::SerdeDefaultFn(fn_str) => {
-                        // TODO
-                        println!("handle `{fn_str}`");
                         example.push_str(&field_name);
-                        example.push_str(" = \"\"");
+                        example.push_str(" = \".to_string()");
+                        example.push_str(&format!(" + &format!(\"{{:?}}\",  {fn_str}())"));
+                        example.push_str(&"+ &\"\n");
                     }
                 }
-                example.push('\n');
             }
         }
     }
+    example.push_str("\".to_string()");
+
+    let stream: proc_macro2::TokenStream = example.parse().unwrap();
 
     let output = quote! {
         impl toml_example::TomlExample for #struct_name {
-            fn toml_example() -> &'static str {
-                #example
+            fn toml_example() -> String {
+                #stream
             }
         }
     };

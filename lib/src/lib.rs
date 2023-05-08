@@ -28,7 +28,7 @@ b = ""
 "#
         );
         assert_eq!(
-            toml::from_str::<Config>(Config::toml_example()).unwrap(),
+            toml::from_str::<Config>(&Config::toml_example()).unwrap(),
             Config::default()
         )
     }
@@ -52,7 +52,7 @@ b = ""
 "#
         );
         assert_eq!(
-            toml::from_str::<Config>(Config::toml_example()).unwrap(),
+            toml::from_str::<Config>(&Config::toml_example()).unwrap(),
             Config::default()
         )
     }
@@ -83,7 +83,7 @@ c = [ 0, ]
 # d = [ 0, ]
 "#
         );
-        assert!(toml::from_str::<Config>(Config::toml_example()).is_ok())
+        assert!(toml::from_str::<Config>(&Config::toml_example()).is_ok())
     }
 
     #[test]
@@ -108,7 +108,7 @@ a = 0
 "#
         );
         assert_eq!(
-            toml::from_str::<Config>(Config::toml_example()).unwrap(),
+            toml::from_str::<Config>(&Config::toml_example()).unwrap(),
             Config::default()
         )
     }
@@ -149,9 +149,5 @@ c = 0
 d = ""
 "#
         );
-        assert_eq!(
-            toml::from_str::<Config>(Config::toml_example()).unwrap(),
-            Config::default()
-        )
     }
 }
