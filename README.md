@@ -26,6 +26,18 @@ struct Config {
     c: Option<usize>,
     /// Config.d is a list of number
     d: Vec<usize>,
+    /// Config.e should be a number
+    #[serde(default = "default_int")]
+    e: usize,
+    /// Config.f should be a string
+    #[serde(default = "default_str")]
+    f: String,
+}
+fn default_int() -> usize {
+    7
+}
+fn default_str() -> String {
+    "default".into()
 }
 let example = Config::toml_example();
 ```
@@ -43,11 +55,14 @@ b = ""
 # c = 0
 # Config.d is a list of number
 # d = [ 0, ]
+# Config.e should be a number
+e = 7
+# Config.f should be a string
+f = "default"
 ```
 
 ## Will do later
 - nesting structure
-- use `#[serde(default = "default_resource")]` for example
 - function to write example file, `to_toml_example(file_name)`
 
 [crates-badge]: https://img.shields.io/crates/v/toml-example.svg
