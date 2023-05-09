@@ -9,6 +9,8 @@ A lib help generate toml example
 This crate provides the `TomlExample` trait and an accompanying derive macro.
 
 Deriving `TomlExample` on a struct will provide `to_example` function help generate toml example file base documentation
+- support `#[serde(default)]`, `#[serde(default = "function_name")]` attributes
+- provide `#[toml_example(default)]`, `#[toml_example(default = 0)]`, `#[toml_example(default = "default_string")]` attributes
 
 ## Quick Example
 ```rust 
@@ -32,12 +34,18 @@ struct Config {
     /// Config.f should be a string
     #[serde(default = "default_str")]
     f: String,
+    /// Config.g should be a number
+    #[toml_example(default =7)]
+    g: usize,
+    /// Config.f should be a string
+    #[toml_example(default = "seven")]
+    h: String,
 }
 fn default_int() -> usize {
     7
 }
 fn default_str() -> String {
-    "default".into()
+    "seven".into()
 }
 
 Config::to_toml_example("example.toml");  // write example to a file
@@ -60,7 +68,11 @@ b = ""
 # Config.e should be a number
 e = 7
 # Config.f should be a string
-f = "default"
+f = "seven"
+# Config.g should be a number
+g = 7
+# Config.h should be a string
+h = "seven"
 ```
 
 ## Will do later
