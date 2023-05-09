@@ -60,20 +60,28 @@ Toml example base on the doc string of each field
 
 # Config.a should be a number
 a = 0
+
 # Config.b should be a string
 b = ""
+
 # Optional Config.c is a number
 # c = 0
+
 # Config.d is a list of number
 # d = [ 0, ]
+
 # Config.e should be a number
 e = 7
+
 # Config.f should be a string
 f = "seven"
+
 # Config.g should be a number
 g = 7
+
 # Config.h should be a string
 h = "seven"
+
 ```
 
 ## Will do later

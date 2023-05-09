@@ -23,8 +23,10 @@ mod tests {
             Config::toml_example(),
             r#"# Config.a should be a number
 a = 0
+
 # Config.b should be a string
 b = ""
+
 "#
         );
         assert_eq!(
@@ -38,8 +40,10 @@ b = ""
             std::fs::read_to_string(tmp_file).unwrap(),
             r#"# Config.a should be a number
 a = 0
+
 # Config.b should be a string
 b = ""
+
 "#
         );
     }
@@ -58,8 +62,10 @@ b = ""
             Config::toml_example(),
             r#"# Config.a is an optional number
 # a = 0
+
 # Config.b is an optional string
 # b = ""
+
 "#
         );
         assert_eq!(
@@ -86,12 +92,16 @@ b = ""
             Config::toml_example(),
             r#"# Config.a is a list of number
 a = [ 0, ]
+
 # Config.b is a list of string
 b = [ "", ]
+
 # Config.c
 c = [ 0, ]
+
 # Config.d
 # d = [ 0, ]
+
 "#
         );
         assert!(toml::from_str::<Config>(&Config::toml_example()).is_ok())
@@ -116,6 +126,7 @@ c = [ 0, ]
 # Config.a should be a number
 # the number should be greater or equal zero
 a = 0
+
 "#
         );
         assert_eq!(
@@ -154,13 +165,18 @@ a = 0
             Config::toml_example(),
             r#"# Config.a should be a number
 a = 7
+
 # Config.b should be a string
 b = "default"
+
 # Config.c should be a number
 c = 0
+
 # Config.d should be a string
 d = ""
+
 # e = 0
+
 "#
         );
     }
@@ -188,9 +204,12 @@ d = ""
             Config::toml_example(),
             r#"# Config.a should be a number
 a = 7
+
 # Config.b should be a string
 b = "seven"
+
 c = "default"
+
 "#
         );
     }

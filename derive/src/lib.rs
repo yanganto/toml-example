@@ -213,6 +213,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                     }
                 }
             }
+            example.push('\n');
         }
     }
     example.push_str("\"#.to_string()");
