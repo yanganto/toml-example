@@ -18,3 +18,9 @@ serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
 toml = "0.7"
 
+[features]
+default = ["serde"]
+serde = [
+    "toml-example-derive/serde"
+]
+

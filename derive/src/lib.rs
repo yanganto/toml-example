@@ -97,13 +97,16 @@ fn parse_doc_default_attrs(attrs: &[Attribute]) -> (Vec<String>, Option<DefaultS
                     .map(|s| s.ident == "serde")
                     .unwrap_or_default() =>
             {
-                let token_str = tokens.to_string();
-                if token_str.starts_with("default") {
-                    if let Some(s) = token_str.split_once(" = ") {
-                        default_source =
-                            Some(DefaultSource::SerdeDefaultFn(s.1.trim_matches('"').into()));
-                    } else {
-                        default_source = Some(DefaultSource::DefaultFn(None));
+                #[cfg(feature = "serde")]
+                {
+                    let token_str = tokens.to_string();
+                    if token_str.starts_with("default") {
+                        if let Some(s) = token_str.split_once(" = ") {
+                            default_source =
+                                Some(DefaultSource::SerdeDefaultFn(s.1.trim_matches('"').into()));
+                        } else {
+                            default_source = Some(DefaultSource::DefaultFn(None));
+                        }
                     }
                 }
             }
