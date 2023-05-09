@@ -32,6 +32,7 @@ fn default_value(ty: String) -> String {
     .to_string()
 }
 
+/// return type without option
 fn parse_type(ty: &Type, default: &mut String, optional: &mut bool) -> Option<String> {
     let mut r#type = None;
     if let Type::Path(TypePath { path, .. }) = ty {
@@ -47,7 +48,7 @@ fn parse_type(ty: &Type, default: &mut String, optional: &mut bool) -> Option<St
                 }) = arguments
                 {
                     if let Some(GenericArgument::Type(ty)) = args.first() {
-                        parse_type(ty, default, &mut false);
+                        r#type = parse_type(ty, default, &mut false);
                     }
                 }
             } else if id == "Vec" {
@@ -57,7 +58,7 @@ fn parse_type(ty: &Type, default: &mut String, optional: &mut bool) -> Option<St
                 {
                     if let Some(GenericArgument::Type(ty)) = args.first() {
                         let mut item_default_value = String::new();
-                        parse_type(ty, &mut item_default_value, &mut false);
+                        r#type = parse_type(ty, &mut item_default_value, &mut false);
                         *default = if item_default_value.is_empty() {
                             "[  ]".to_string()
                         } else {
@@ -169,7 +170,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                     }
                     DefaultSource::DefaultFn(None) => {
                         example.push_str(&field_name);
-                        example.push_str(" = \"\"\n");
+                        example.push_str(" = \\\"\\\"\n");
                     }
                     DefaultSource::DefaultFn(Some(ty)) => {
                         example.push_str(&field_name);
