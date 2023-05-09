@@ -147,6 +147,8 @@ a = 0
             /// Config.d should be a string
             #[serde(default)]
             d: String,
+            #[serde(default)]
+            e: Option<usize>,
         }
         assert_eq!(
             Config::toml_example(),
@@ -158,6 +160,7 @@ b = "default"
 c = 0
 # Config.d should be a string
 d = ""
+# e = 0
 "#
         );
     }
