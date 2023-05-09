@@ -164,4 +164,34 @@ d = ""
 "#
         );
     }
+
+    #[test]
+    fn toml_example_default() {
+        fn default_str() -> String {
+            "seven".into()
+        }
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Config {
+            /// Config.a should be a number
+            #[toml_example(default = 7)]
+            a: usize,
+            /// Config.b should be a string
+            #[toml_example(default = "default")]
+            #[serde(default = "default_str")]
+            b: String,
+            #[serde(default = "default_str")]
+            #[toml_example(default = "default")]
+            c: String,
+        }
+        assert_eq!(
+            Config::toml_example(),
+            r#"# Config.a should be a number
+a = 7
+# Config.b should be a string
+b = "seven"
+c = "default"
+"#
+        );
+    }
 }

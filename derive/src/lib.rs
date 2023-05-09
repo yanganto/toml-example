@@ -97,11 +97,30 @@ fn parse_doc_default_attrs(attrs: &[Attribute]) -> (Vec<String>, Option<DefaultS
                     .map(|s| s.ident == "serde")
                     .unwrap_or_default() =>
             {
+                #[cfg(feature = "serde")]
+                {
+                    let token_str = tokens.to_string();
+                    if token_str.starts_with("default") {
+                        if let Some(s) = token_str.split_once(" = ") {
+                            default_source =
+                                Some(DefaultSource::SerdeDefaultFn(s.1.trim_matches('"').into()));
+                        } else {
+                            default_source = Some(DefaultSource::DefaultFn(None));
+                        }
+                    }
+                }
+            }
+            (Outer, List(MetaList { path, tokens, .. }))
+                if path
+                    .segments
+                    .last()
+                    .map(|s| s.ident == "toml_example")
+                    .unwrap_or_default() =>
+            {
                 let token_str = tokens.to_string();
                 if token_str.starts_with("default") {
                     if let Some(s) = token_str.split_once(" = ") {
-                        default_source =
-                            Some(DefaultSource::SerdeDefaultFn(s.1.trim_matches('"').into()));
+                        default_source = Some(DefaultSource::DefaultValue(s.1.into()));
                     } else {
                         default_source = Some(DefaultSource::DefaultFn(None));
                     }
@@ -121,6 +140,7 @@ fn get_default_and_doc_from_field(field: &Field) -> (DefaultSource, Vec<String>,
     let default_source = match default_source {
         Some(DefaultSource::DefaultFn(_)) => DefaultSource::DefaultFn(ty),
         Some(DefaultSource::SerdeDefaultFn(f)) => DefaultSource::SerdeDefaultFn(f),
+        Some(DefaultSource::DefaultValue(v)) => DefaultSource::DefaultValue(v),
         _ => DefaultSource::DefaultValue(default_value),
     };
     (default_source, docs, optional)
@@ -139,7 +159,7 @@ fn push_doc_string(example: &mut String, docs: Vec<String>, paragraph: bool) {
     }
 }
 
-#[proc_macro_derive(TomlExample)]
+#[proc_macro_derive(TomlExample, attributes(toml_example))]
 #[proc_macro_error]
 pub fn derive_patch(item: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(item as syn::DeriveInput);
