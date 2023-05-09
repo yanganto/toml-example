@@ -19,6 +19,7 @@ use syn::{
 enum DefaultSource {
     DefaultValue(String),
     DefaultFn(Option<String>),
+    #[allow(dead_code)]
     SerdeDefaultFn(String),
 }
 
@@ -90,16 +91,22 @@ fn parse_doc_default_attrs(attrs: &[Attribute]) -> (Vec<String>, Option<DefaultS
                     }
                 }
             }
-            (Outer, List(MetaList { path, tokens, .. }))
-                if path
-                    .segments
-                    .last()
-                    .map(|s| s.ident == "serde")
-                    .unwrap_or_default() =>
+            (
+                Outer,
+                List(MetaList {
+                    path,
+                    tokens: _tokens,
+                    ..
+                }),
+            ) if path
+                .segments
+                .last()
+                .map(|s| s.ident == "serde")
+                .unwrap_or_default() =>
             {
                 #[cfg(feature = "serde")]
                 {
-                    let token_str = tokens.to_string();
+                    let token_str = _tokens.to_string();
                     if token_str.starts_with("default") {
                         if let Some(s) = token_str.split_once(" = ") {
                             default_source =
@@ -164,7 +171,7 @@ fn push_doc_string(example: &mut String, docs: Vec<String>, paragraph: bool) {
 pub fn derive_patch(item: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(item as syn::DeriveInput);
     let struct_name = &input.ident;
-    let mut example = "\"".to_string();
+    let mut example = "r#\"".to_string();
     push_doc_string(&mut example, parse_doc_default_attrs(&input.attrs).0, true);
 
     let fields = if let syn::Data::Struct(syn::DataStruct { fields, .. }) = &input.data {
@@ -185,30 +192,30 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                     DefaultSource::DefaultValue(default) => {
                         example.push_str(&field_name);
                         example.push_str(" = ");
-                        example.push_str(&default.replace('\\', "\\\\").replace('\"', "\\\""));
+                        example.push_str(&default);
                         example.push('\n');
                     }
                     DefaultSource::DefaultFn(None) => {
                         example.push_str(&field_name);
-                        example.push_str(" = \\\"\\\"\n");
+                        example.push_str(" = \"\"\n");
                     }
                     DefaultSource::DefaultFn(Some(ty)) => {
                         example.push_str(&field_name);
-                        example.push_str(" = \".to_string()");
+                        example.push_str(" = \"#.to_string()");
                         example.push_str(&format!(" + &format!(\"{{:?}}\",  {ty}::default())"));
-                        example.push_str(" + &\"\n");
+                        example.push_str(" + &r#\"\n");
                     }
                     DefaultSource::SerdeDefaultFn(fn_str) => {
                         example.push_str(&field_name);
-                        example.push_str(" = \".to_string()");
+                        example.push_str(" = \"#.to_string()");
                         example.push_str(&format!(" + &format!(\"{{:?}}\",  {fn_str}())"));
-                        example.push_str("+ &\"\n");
+                        example.push_str("+ &r#\"\n");
                     }
                 }
             }
         }
     }
-    example.push_str("\".to_string()");
+    example.push_str("\"#.to_string()");
 
     let stream: proc_macro2::TokenStream = example.parse().unwrap();
 
