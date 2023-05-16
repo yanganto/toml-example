@@ -24,9 +24,26 @@ enum DefaultSource {
 }
 
 #[derive(PartialEq)]
+enum NestingType {
+    None,
+    Vec,
+    Option,
+    Dict,
+}
+
+#[derive(PartialEq)]
 enum NestingFormat {
-    Section,
+    Section(NestingType),
     Prefix,
+}
+
+impl NestingFormat {
+    fn is_section(&self) -> bool {
+        match self {
+            NestingFormat::Section(_) => true,
+            _ => false,
+        }
+    }
 }
 
 fn default_value(ty: String) -> String {
@@ -39,8 +56,13 @@ fn default_value(ty: String) -> String {
     .to_string()
 }
 
-/// return type without option
-fn parse_type(ty: &Type, default: &mut String, optional: &mut bool) -> Option<String> {
+/// return type without Option, Vec
+fn parse_type(
+    ty: &Type,
+    default: &mut String,
+    optional: &mut bool,
+    nesting_format: &mut Option<NestingFormat>,
+) -> Option<String> {
     let mut r#type = None;
     if let Type::Path(TypePath { path, .. }) = ty {
         if let Some(PathSegment { ident, arguments }) = path.segments.last() {
@@ -50,28 +72,47 @@ fn parse_type(ty: &Type, default: &mut String, optional: &mut bool) -> Option<St
                 *default = default_value(id);
             } else if id == "Option" {
                 *optional = true;
+                if nesting_format.is_some() {
+                    *nesting_format = Some(NestingFormat::Section(NestingType::Option));
+                }
                 if let PathArguments::AngleBracketed(AngleBracketedGenericArguments {
                     args, ..
                 }) = arguments
                 {
                     if let Some(GenericArgument::Type(ty)) = args.first() {
-                        r#type = parse_type(ty, default, &mut false);
+                        r#type = parse_type(ty, default, &mut false, &mut None);
                     }
                 }
             } else if id == "Vec" {
+                if nesting_format.is_some() {
+                    *nesting_format = Some(NestingFormat::Section(NestingType::Vec));
+                }
                 if let PathArguments::AngleBracketed(AngleBracketedGenericArguments {
                     args, ..
                 }) = arguments
                 {
                     if let Some(GenericArgument::Type(ty)) = args.first() {
                         let mut item_default_value = String::new();
-                        r#type = parse_type(ty, &mut item_default_value, &mut false);
+                        r#type = parse_type(ty, &mut item_default_value, &mut false, &mut None);
                         *default = if item_default_value.is_empty() {
                             "[  ]".to_string()
                         } else {
                             format!("[ {item_default_value:}, ]")
                         }
                     }
+                }
+            } else if id == "HashMap" || id == "BTreeMap" {
+                if let PathArguments::AngleBracketed(AngleBracketedGenericArguments {
+                    args, ..
+                }) = arguments
+                {
+                    if let Some(GenericArgument::Type(ty)) = args.last() {
+                        let mut item_default_value = String::new();
+                        r#type = parse_type(ty, &mut item_default_value, &mut false, &mut None);
+                    }
+                }
+                if nesting_format.is_some() {
+                    *nesting_format = Some(NestingFormat::Section(NestingType::Dict));
                 }
             }
             // TODO else Complex struct in else
@@ -143,11 +184,11 @@ fn parse_attrs(attrs: &[Attribute]) -> (Vec<String>, Option<DefaultSource>, Opti
                     if let Some((_, s)) = token_str.split_once(" = ") {
                         nesting_format = match s {
                             "prefix" => Some(NestingFormat::Prefix),
-                            "section" => Some(NestingFormat::Section),
+                            "section" => Some(NestingFormat::Section(NestingType::None)),
                             _ => abort!(&attr, "please use prefix or section for nesting derive"),
                         }
                     } else {
-                        nesting_format = Some(NestingFormat::Section);
+                        nesting_format = Some(NestingFormat::Section(NestingType::None));
                     }
                 }
             }
@@ -160,8 +201,13 @@ fn parse_attrs(attrs: &[Attribute]) -> (Vec<String>, Option<DefaultSource>, Opti
 fn parse_field(field: &Field) -> (DefaultSource, Vec<String>, bool, Option<NestingFormat>) {
     let mut default_value = String::new();
     let mut optional = false;
-    let (docs, default_source, nesting_format) = parse_attrs(&field.attrs);
-    let ty = parse_type(&field.ty, &mut default_value, &mut optional);
+    let (docs, default_source, mut nesting_format) = parse_attrs(&field.attrs);
+    let ty = parse_type(
+        &field.ty,
+        &mut default_value,
+        &mut optional,
+        &mut nesting_format,
+    );
     let default_source = match default_source {
         Some(DefaultSource::DefaultFn(_)) => DefaultSource::DefaultFn(ty),
         Some(DefaultSource::SerdeDefaultFn(f)) => DefaultSource::SerdeDefaultFn(f),
@@ -195,17 +241,29 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
     };
     if let Named(fields_named) = fields {
         for f in fields_named.named.iter() {
-            let field_type = parse_type(&f.ty, &mut String::new(), &mut false);
+            let field_type = parse_type(&f.ty, &mut String::new(), &mut false, &mut None);
             if let Some(field_name) = f.ident.as_ref().map(|i| i.to_string()) {
                 let (default, doc_str, optional, nesting_format) = parse_field(f);
                 push_doc_string(&mut field_example, doc_str);
 
-                if nesting_format == Some(NestingFormat::Section) {
+                if nesting_format
+                    .as_ref()
+                    .map(|f| f.is_section())
+                    .unwrap_or_default()
+                {
                     if let Some(field_type) = field_type {
                         field_example.push_str("\"#.to_string()");
-                        field_example.push_str(&format!(
-                            " + &{field_type}::toml_field_example(\"[{field_name:}]\n\", \"\")"
-                        ));
+                        match nesting_format {
+                            Some(NestingFormat::Section(NestingType::Vec)) => field_example.push_str(&format!(
+                                " + &{field_type}::toml_field_example(\"[[{field_name:}]]\n\", \"\")"
+                            )),
+                            Some(NestingFormat::Section(NestingType::Dict)) => field_example.push_str(&format!(
+                                " + &{field_type}::toml_field_example(\"[{field_name:}.example]\n\", \"\")"
+                            )),
+                            _ => field_example.push_str(&format!(
+                                " + &{field_type}::toml_field_example(\"[{field_name:}]\n\", \"\")"
+                            ))
+                        };
                         field_example.push_str(" + &r#\"");
                     } else {
                         abort!(&f.ident, "nesting only work on inner structure")
