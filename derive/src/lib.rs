@@ -27,7 +27,6 @@ enum DefaultSource {
 enum NestingType {
     None,
     Vec,
-    Option,
     Dict,
 }
 
@@ -72,15 +71,12 @@ fn parse_type(
                 *default = default_value(id);
             } else if id == "Option" {
                 *optional = true;
-                if nesting_format.is_some() {
-                    *nesting_format = Some(NestingFormat::Section(NestingType::Option));
-                }
                 if let PathArguments::AngleBracketed(AngleBracketedGenericArguments {
                     args, ..
                 }) = arguments
                 {
                     if let Some(GenericArgument::Type(ty)) = args.first() {
-                        r#type = parse_type(ty, default, &mut false, &mut None);
+                        r#type = parse_type(ty, default, &mut false, nesting_format);
                     }
                 }
             } else if id == "Vec" {
@@ -254,11 +250,20 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                     if let Some(field_type) = field_type {
                         field_example.push_str("\"#.to_string()");
                         match nesting_format {
+                            Some(NestingFormat::Section(NestingType::Vec)) if optional => field_example.push_str(&format!(
+                                " + &{field_type}::toml_field_example(\"# [[{field_name:}]]\n\", \"# \")"
+                            )),
                             Some(NestingFormat::Section(NestingType::Vec)) => field_example.push_str(&format!(
                                 " + &{field_type}::toml_field_example(\"[[{field_name:}]]\n\", \"\")"
                             )),
+                            Some(NestingFormat::Section(NestingType::Dict)) if optional => field_example.push_str(&format!(
+                                " + &{field_type}::toml_field_example(\"# [{field_name:}.example]\n\", \"# \")"
+                            )),
                             Some(NestingFormat::Section(NestingType::Dict)) => field_example.push_str(&format!(
                                 " + &{field_type}::toml_field_example(\"[{field_name:}.example]\n\", \"\")"
+                            )),
+                            _ if optional => field_example.push_str(&format!(
+                                " + &{field_type}::toml_field_example(\"# [{field_name:}]\n\", \"# \")"
                             )),
                             _ => field_example.push_str(&format!(
                                 " + &{field_type}::toml_field_example(\"[{field_name:}]\n\", \"\")"
@@ -271,9 +276,15 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                 } else if nesting_format == Some(NestingFormat::Prefix) {
                     if let Some(field_type) = field_type {
                         field_example.push_str("\"#.to_string()");
-                        field_example.push_str(&format!(
-                            " + &{field_type}::toml_field_example(\"\", \"{field_name:}.\")"
-                        ));
+                        if optional {
+                            field_example.push_str(&format!(
+                                " + &{field_type}::toml_field_example(\"\", \"# {field_name:}.\")"
+                            ));
+                        } else {
+                            field_example.push_str(&format!(
+                                " + &{field_type}::toml_field_example(\"\", \"{field_name:}.\")"
+                            ));
+                        }
                         field_example.push_str(" + &r#\"");
                     } else {
                         abort!(&f.ident, "nesting only work on inner structure")
