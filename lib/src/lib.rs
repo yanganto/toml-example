@@ -336,13 +336,13 @@ inner.a = 0
     #[test]
     fn nesting_vector() {
         /// Service with specific port
-        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[derive(TomlExample, Deserialize)]
         #[allow(dead_code)]
         struct Service {
             /// port should be a number
             port: usize,
         }
-        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[derive(TomlExample, Deserialize)]
         #[allow(dead_code)]
         struct Node {
             /// Services are running in the node
@@ -365,13 +365,13 @@ port = 0
     #[test]
     fn nesting_hashmap() {
         /// Service with specific port
-        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[derive(TomlExample, Deserialize)]
         #[allow(dead_code)]
         struct Service {
             /// port should be a number
             port: usize,
         }
-        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[derive(TomlExample, Deserialize)]
         #[allow(dead_code)]
         struct Node {
             /// Services are running in the node
@@ -489,13 +489,13 @@ port = 0
     #[test]
     fn optional_nesting_vector() {
         /// Service with specific port
-        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[derive(TomlExample, Deserialize)]
         #[allow(dead_code)]
         struct Service {
             /// port should be a number
             port: usize,
         }
-        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[derive(TomlExample, Deserialize)]
         #[allow(dead_code)]
         struct Node {
             /// Services are running in the node
@@ -518,13 +518,13 @@ port = 0
     #[test]
     fn optional_nesting_hashmap() {
         /// Service with specific port
-        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[derive(TomlExample, Deserialize)]
         #[allow(dead_code)]
         struct Service {
             /// port should be a number
             port: usize,
         }
-        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[derive(TomlExample, Deserialize)]
         #[allow(dead_code)]
         struct Node {
             /// Services are running in the node
