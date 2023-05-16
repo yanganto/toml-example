@@ -16,6 +16,7 @@ use syn::{
     MetaList, MetaNameValue, PathArguments, PathSegment, Type, TypePath,
 };
 
+#[derive(Debug)]
 enum DefaultSource {
     DefaultValue(String),
     DefaultFn(Option<String>),
@@ -221,6 +222,15 @@ fn push_doc_string(example: &mut String, docs: Vec<String>) {
     }
 }
 
+fn default_key(default: DefaultSource) -> String {
+    if let DefaultSource::DefaultValue(v) = default {
+        if !v.trim_matches('\"').is_empty() {
+            return v.trim_matches('\"').to_string();
+        }
+    }
+    "example".into()
+}
+
 #[proc_macro_derive(TomlExample, attributes(toml_example))]
 #[proc_macro_error]
 pub fn derive_patch(item: TokenStream) -> TokenStream {
@@ -249,6 +259,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                 {
                     if let Some(field_type) = field_type {
                         field_example.push_str("\"#.to_string()");
+                        let key = default_key(default);
                         match nesting_format {
                             Some(NestingFormat::Section(NestingType::Vec)) if optional => field_example.push_str(&format!(
                                 " + &{field_type}::toml_field_example(\"# [[{field_name:}]]\n\", \"# \")"
@@ -257,10 +268,10 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                                 " + &{field_type}::toml_field_example(\"[[{field_name:}]]\n\", \"\")"
                             )),
                             Some(NestingFormat::Section(NestingType::Dict)) if optional => field_example.push_str(&format!(
-                                " + &{field_type}::toml_field_example(\"# [{field_name:}.example]\n\", \"# \")"
+                                " + &{field_type}::toml_field_example(\"# [{field_name:}.{key}]\n\", \"# \")"
                             )),
                             Some(NestingFormat::Section(NestingType::Dict)) => field_example.push_str(&format!(
-                                " + &{field_type}::toml_field_example(\"[{field_name:}.example]\n\", \"\")"
+                                " + &{field_type}::toml_field_example(\"[{field_name:}.{key}]\n\", \"\")"
                             )),
                             _ if optional => field_example.push_str(&format!(
                                 " + &{field_type}::toml_field_example(\"# [{field_name:}]\n\", \"# \")"
