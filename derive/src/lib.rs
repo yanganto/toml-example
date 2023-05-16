@@ -171,15 +171,10 @@ fn parse_field(field: &Field) -> (DefaultSource, Vec<String>, bool, Option<Nesti
     (default_source, docs, optional, nesting_format)
 }
 
-fn push_doc_string(example: &mut String, docs: Vec<String>, paragraph: bool) {
-    let has_docs = !docs.is_empty();
+fn push_doc_string(example: &mut String, docs: Vec<String>) {
     for doc in docs.into_iter() {
         example.push('#');
         example.push_str(&doc);
-        example.push('\n');
-    }
-
-    if has_docs && paragraph {
         example.push('\n');
     }
 }
@@ -189,8 +184,9 @@ fn push_doc_string(example: &mut String, docs: Vec<String>, paragraph: bool) {
 pub fn derive_patch(item: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(item as syn::DeriveInput);
     let struct_name = &input.ident;
-    let mut example = "r#\"".to_string();
-    push_doc_string(&mut example, parse_attrs(&input.attrs).0, true);
+    let mut struct_doc = "r#\"".to_string();
+    let mut field_example = "r#\"".to_string();
+    push_doc_string(&mut struct_doc, parse_attrs(&input.attrs).0);
 
     let fields = if let syn::Data::Struct(syn::DataStruct { fields, .. }) = &input.data {
         fields
@@ -202,57 +198,68 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
             let field_type = parse_type(&f.ty, &mut String::new(), &mut false);
             if let Some(field_name) = f.ident.as_ref().map(|i| i.to_string()) {
                 let (default, doc_str, optional, nesting_format) = parse_field(f);
-                push_doc_string(&mut example, doc_str, false);
+                push_doc_string(&mut field_example, doc_str);
 
                 if nesting_format == Some(NestingFormat::Section) {
                     if let Some(field_type) = field_type {
-                        example.push_str(&format!("[{field_name:}]\n\"#.to_string()"));
-                        example.push_str(&format!(" + &{field_type}::toml_example()"));
-                        example.push_str(" + &r#\"");
+                        field_example.push_str("\"#.to_string()");
+                        field_example.push_str(&format!(
+                            " + &{field_type}::toml_field_example(\"[{field_name:}]\n\")"
+                        ));
+                        field_example.push_str(" + &r#\"");
                     } else {
-                        abort!(&f.ident, "nesting only work on inner sturcture")
+                        abort!(&f.ident, "nesting only work on inner structure")
                     }
                 } else {
                     if optional {
-                        example.push_str("# ");
+                        field_example.push_str("# ");
                     }
                     match default {
                         DefaultSource::DefaultValue(default) => {
-                            example.push_str(&field_name);
-                            example.push_str(" = ");
-                            example.push_str(&default);
-                            example.push('\n');
+                            field_example.push_str(&field_name);
+                            field_example.push_str(" = ");
+                            field_example.push_str(&default);
+                            field_example.push('\n');
                         }
                         DefaultSource::DefaultFn(None) => {
-                            example.push_str(&field_name);
-                            example.push_str(" = \"\"\n");
+                            field_example.push_str(&field_name);
+                            field_example.push_str(" = \"\"\n");
                         }
                         DefaultSource::DefaultFn(Some(ty)) => {
-                            example.push_str(&field_name);
-                            example.push_str(" = \"#.to_string()");
-                            example.push_str(&format!(" + &format!(\"{{:?}}\",  {ty}::default())"));
-                            example.push_str(" + &r#\"\n");
+                            field_example.push_str(&field_name);
+                            field_example.push_str(" = \"#.to_string()");
+                            field_example
+                                .push_str(&format!(" + &format!(\"{{:?}}\",  {ty}::default())"));
+                            field_example.push_str(" + &r#\"\n");
                         }
                         DefaultSource::SerdeDefaultFn(fn_str) => {
-                            example.push_str(&field_name);
-                            example.push_str(" = \"#.to_string()");
-                            example.push_str(&format!(" + &format!(\"{{:?}}\",  {fn_str}())"));
-                            example.push_str("+ &r#\"\n");
+                            field_example.push_str(&field_name);
+                            field_example.push_str(" = \"#.to_string()");
+                            field_example
+                                .push_str(&format!(" + &format!(\"{{:?}}\",  {fn_str}())"));
+                            field_example.push_str("+ &r#\"\n");
                         }
                     }
+                    field_example.push('\n');
                 }
             }
-            example.push('\n');
         }
     }
-    example.push_str("\"#.to_string()");
+    struct_doc.push_str("\"#.to_string()");
+    field_example.push_str("\"#.to_string()");
 
-    let stream: proc_macro2::TokenStream = example.parse().unwrap();
+    let struct_doc_stream: proc_macro2::TokenStream =
+        struct_doc.parse().expect("unexpected token in struct doc");
+    let field_example_stream: proc_macro2::TokenStream =
+        field_example.parse().expect("unexpected toekn in fields");
 
     let output = quote! {
         impl toml_example::TomlExample for #struct_name {
             fn toml_example() -> String {
-                #stream
+                #struct_name::toml_field_example("")
+            }
+            fn toml_field_example(lable: &str) -> String {
+                #struct_doc_stream + lable + &#field_example_stream
             }
         }
     };

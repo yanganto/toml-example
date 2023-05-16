@@ -109,7 +109,7 @@ c = [ 0, ]
     }
 
     #[test]
-    fn sturct_doc() {
+    fn struct_doc() {
         /// Config is to arrange something or change the controls on a computer or other device
         /// so that it can be used in a particular way
         #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
@@ -123,7 +123,6 @@ c = [ 0, ]
             Config::toml_example(),
             r#"# Config is to arrange something or change the controls on a computer or other device
 # so that it can be used in a particular way
-
 # Config.a should be a number
 # the number should be greater or equal zero
 a = 0
@@ -271,37 +270,37 @@ a = 0
         );
     }
 
-    // #[test]
-    // fn nesting_by_section() {
-    //     /// Inner is a config live in Outer
-    //     #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
-    //     #[allow(dead_code)]
-    //     struct Inner {
-    //         /// Inner.a should be a number
-    //         a: usize,
-    //     }
-    //     #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
-    //     #[allow(dead_code)]
-    //     struct Outer {
-    //         /// Outer.inner is a complex sturct
-    //         #[toml_example(nesting = section)]
-    //         inner: Inner,
-    //     }
-    //     assert_eq!(
-    //         Outer::toml_example(),
-    //         r#"# Outer.inner is a complex sturct
-    // # Inner is a config live in Outer
-    // [inner]
-    // # Inner.a should be a number
-    // a = 0
+    #[test]
+    fn nesting_by_section() {
+        /// Inner is a config live in Outer
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Inner {
+            /// Inner.a should be a number
+            a: usize,
+        }
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Outer {
+            /// Outer.inner is a complex sturct
+            #[toml_example(nesting = section)]
+            inner: Inner,
+        }
+        assert_eq!(
+            Outer::toml_example(),
+            r#"# Outer.inner is a complex sturct
+# Inner is a config live in Outer
+[inner]
+# Inner.a should be a number
+a = 0
 
-    // "#
-    //     );
-    //     assert_eq!(
-    //         toml::from_str::<Outer>(&Outer::toml_example()).unwrap(),
-    //         Outer::default()
-    //     );
-    // }
+"#
+        );
+        assert_eq!(
+            toml::from_str::<Outer>(&Outer::toml_example()).unwrap(),
+            Outer::default()
+        );
+    }
 
     // #[test]
     // fn nesting_by_prefix() {
