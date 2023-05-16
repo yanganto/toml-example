@@ -87,12 +87,14 @@ h = "seven"
 ## Nesting Struct
 A nesting struct wrap with `Option<T>`, `Vec<T>`, `HashMap<String, T>`, `BTreeMap<String, T>` are handled.
 Please add `#[toml_example(nesting)]`, or `#[toml_example(nesting = prefix)]` on the field.
+`#[toml_example(nesting)]`
 
 ```rust
   /// Service with specific port
   #[derive(TomlExample)]
   struct Service {
       /// port should be a number
+      #[toml_example(default = 80)]
       port: usize,
   }
   #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
@@ -100,6 +102,7 @@ Please add `#[toml_example(nesting)]`, or `#[toml_example(nesting = prefix)]` on
   struct Node {
       /// Services are running in the node
       #[toml_example(nesting)]
+      #[toml_example(default = http)]
       services: HashMap<String, Service>,
   }
 ```
@@ -107,9 +110,9 @@ Please add `#[toml_example(nesting)]`, or `#[toml_example(nesting = prefix)]` on
 ```toml
 # Services are running in the node
 # Service with specific port
-[services.example]
+[services.http]
 # port should be a number
-port = 0
+port = 80
 
 ```
 
