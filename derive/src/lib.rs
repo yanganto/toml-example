@@ -334,15 +334,15 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
     let struct_doc_stream: proc_macro2::TokenStream =
         struct_doc.parse().expect("unexpected token in struct doc");
     let field_example_stream: proc_macro2::TokenStream =
-        field_example.parse().expect("unexpected toekn in fields");
+        field_example.parse().expect("unexpected token in fields");
 
     let output = quote! {
         impl toml_example::TomlExample for #struct_name {
             fn toml_example() -> String {
                 #struct_name::toml_field_example("", "")
             }
-            fn toml_field_example(lable: &str, prefix: &str) -> String {
-                #struct_doc_stream + lable + &#field_example_stream
+            fn toml_field_example(label: &str, prefix: &str) -> String {
+                #struct_doc_stream + label + &#field_example_stream
             }
         }
     };
