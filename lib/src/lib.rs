@@ -7,6 +7,7 @@ pub use traits::*;
 mod tests {
     use crate as toml_example;
     use serde_derive::Deserialize;
+    use std::collections::HashMap;
     use toml_example::TomlExample;
 
     #[test]
@@ -108,7 +109,7 @@ c = [ 0, ]
     }
 
     #[test]
-    fn sturct_doc() {
+    fn struct_doc() {
         /// Config is to arrange something or change the controls on a computer or other device
         /// so that it can be used in a particular way
         #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
@@ -122,7 +123,6 @@ c = [ 0, ]
             Config::toml_example(),
             r#"# Config is to arrange something or change the controls on a computer or other device
 # so that it can be used in a particular way
-
 # Config.a should be a number
 # the number should be greater or equal zero
 a = 0
@@ -212,5 +212,335 @@ c = "default"
 
 "#
         );
+    }
+
+    #[test]
+    fn no_nesting() {
+        /// Inner is a config live in Outer
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Inner {
+            /// Inner.a should be a number
+            a: usize,
+        }
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Outer {
+            /// Outer.inner is a complex sturct
+            inner: Inner,
+        }
+        assert_eq!(
+            Outer::toml_example(),
+            r#"# Outer.inner is a complex sturct
+inner = ""
+
+"#
+        );
+    }
+
+    #[test]
+    fn nesting() {
+        /// Inner is a config live in Outer
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Inner {
+            /// Inner.a should be a number
+            a: usize,
+        }
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Outer {
+            /// Outer.inner is a complex sturct
+            #[toml_example(nesting)]
+            inner: Inner,
+        }
+        assert_eq!(
+            Outer::toml_example(),
+            r#"# Outer.inner is a complex sturct
+# Inner is a config live in Outer
+[inner]
+# Inner.a should be a number
+a = 0
+
+"#
+        );
+        assert_eq!(
+            toml::from_str::<Outer>(&Outer::toml_example()).unwrap(),
+            Outer::default()
+        );
+    }
+
+    #[test]
+    fn nesting_by_section() {
+        /// Inner is a config live in Outer
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Inner {
+            /// Inner.a should be a number
+            a: usize,
+        }
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Outer {
+            /// Outer.inner is a complex sturct
+            #[toml_example(nesting = section)]
+            inner: Inner,
+        }
+        assert_eq!(
+            Outer::toml_example(),
+            r#"# Outer.inner is a complex sturct
+# Inner is a config live in Outer
+[inner]
+# Inner.a should be a number
+a = 0
+
+"#
+        );
+        assert_eq!(
+            toml::from_str::<Outer>(&Outer::toml_example()).unwrap(),
+            Outer::default()
+        );
+    }
+
+    #[test]
+    fn nesting_by_prefix() {
+        /// Inner is a config live in Outer
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Inner {
+            /// Inner.a should be a number
+            a: usize,
+        }
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Outer {
+            /// Outer.inner is a complex sturct
+            #[toml_example(nesting = prefix)]
+            inner: Inner,
+        }
+        assert_eq!(
+            Outer::toml_example(),
+            r#"# Outer.inner is a complex sturct
+# Inner is a config live in Outer
+# Inner.a should be a number
+inner.a = 0
+
+"#
+        );
+        assert_eq!(
+            toml::from_str::<Outer>(&Outer::toml_example()).unwrap(),
+            Outer::default()
+        );
+    }
+
+    #[test]
+    fn nesting_vector() {
+        /// Service with specific port
+        #[derive(TomlExample, Deserialize)]
+        #[allow(dead_code)]
+        struct Service {
+            /// port should be a number
+            port: usize,
+        }
+        #[derive(TomlExample, Deserialize)]
+        #[allow(dead_code)]
+        struct Node {
+            /// Services are running in the node
+            #[toml_example(nesting)]
+            services: Vec<Service>,
+        }
+        assert_eq!(
+            Node::toml_example(),
+            r#"# Services are running in the node
+# Service with specific port
+[[services]]
+# port should be a number
+port = 0
+
+"#
+        );
+        assert!(toml::from_str::<Node>(&Node::toml_example()).is_ok());
+    }
+
+    #[test]
+    fn nesting_hashmap() {
+        /// Service with specific port
+        #[derive(TomlExample, Deserialize)]
+        #[allow(dead_code)]
+        struct Service {
+            /// port should be a number
+            port: usize,
+        }
+        #[derive(TomlExample, Deserialize)]
+        #[allow(dead_code)]
+        struct Node {
+            /// Services are running in the node
+            #[toml_example(nesting)]
+            services: HashMap<String, Service>,
+        }
+        assert_eq!(
+            Node::toml_example(),
+            r#"# Services are running in the node
+# Service with specific port
+[services.example]
+# port should be a number
+port = 0
+
+"#
+        );
+        assert!(toml::from_str::<Node>(&Node::toml_example()).is_ok());
+    }
+
+    #[test]
+    fn optional_nesting() {
+        /// Inner is a config live in Outer
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Inner {
+            /// Inner.a should be a number
+            a: usize,
+        }
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Outer {
+            /// Outer.inner is a complex sturct
+            #[toml_example(nesting)]
+            inner: Option<Inner>,
+        }
+        assert_eq!(
+            Outer::toml_example(),
+            r#"# Outer.inner is a complex sturct
+# Inner is a config live in Outer
+# [inner]
+# Inner.a should be a number
+# a = 0
+
+"#
+        );
+        assert_eq!(
+            toml::from_str::<Outer>(&Outer::toml_example()).unwrap(),
+            Outer::default()
+        );
+    }
+
+    #[test]
+    fn optional_nesting_by_section() {
+        /// Inner is a config live in Outer
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Inner {
+            /// Inner.a should be a number
+            a: usize,
+        }
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Outer {
+            /// Outer.inner is a complex sturct
+            #[toml_example(nesting = section)]
+            inner: Option<Inner>,
+        }
+        assert_eq!(
+            Outer::toml_example(),
+            r#"# Outer.inner is a complex sturct
+# Inner is a config live in Outer
+# [inner]
+# Inner.a should be a number
+# a = 0
+
+"#
+        );
+        assert_eq!(
+            toml::from_str::<Outer>(&Outer::toml_example()).unwrap(),
+            Outer::default()
+        );
+    }
+
+    #[test]
+    fn optional_nesting_by_prefix() {
+        /// Inner is a config live in Outer
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Inner {
+            /// Inner.a should be a number
+            a: usize,
+        }
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Outer {
+            /// Outer.inner is a complex sturct
+            #[toml_example(nesting = prefix)]
+            inner: Option<Inner>,
+        }
+        assert_eq!(
+            Outer::toml_example(),
+            r#"# Outer.inner is a complex sturct
+# Inner is a config live in Outer
+# Inner.a should be a number
+# inner.a = 0
+
+"#
+        );
+        assert_eq!(
+            toml::from_str::<Outer>(&Outer::toml_example()).unwrap(),
+            Outer::default()
+        );
+    }
+
+    #[test]
+    fn optional_nesting_vector() {
+        /// Service with specific port
+        #[derive(TomlExample, Deserialize)]
+        #[allow(dead_code)]
+        struct Service {
+            /// port should be a number
+            port: usize,
+        }
+        #[derive(TomlExample, Deserialize)]
+        #[allow(dead_code)]
+        struct Node {
+            /// Services are running in the node
+            #[toml_example(nesting)]
+            services: Option<Vec<Service>>,
+        }
+        assert_eq!(
+            Node::toml_example(),
+            r#"# Services are running in the node
+# Service with specific port
+# [[services]]
+# port should be a number
+# port = 0
+
+"#
+        );
+        assert!(toml::from_str::<Node>(&Node::toml_example()).is_ok());
+    }
+
+    #[test]
+    fn optional_nesting_hashmap() {
+        /// Service with specific port
+        #[derive(TomlExample, Deserialize)]
+        #[allow(dead_code)]
+        struct Service {
+            /// port should be a number
+            port: usize,
+        }
+        #[derive(TomlExample, Deserialize)]
+        #[allow(dead_code)]
+        struct Node {
+            /// Services are running in the node
+            #[toml_example(nesting)]
+            services: Option<HashMap<String, Service>>,
+        }
+        assert_eq!(
+            Node::toml_example(),
+            r#"# Services are running in the node
+# Service with specific port
+# [services.example]
+# port should be a number
+# port = 0
+
+"#
+        );
+        assert!(toml::from_str::<Node>(&Node::toml_example()).is_ok());
     }
 }

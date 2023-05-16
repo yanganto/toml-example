@@ -84,8 +84,37 @@ h = "seven"
 
 ```
 
+## Nesting Struct
+A nesting struct wrap with `Option<T>`, `Vec<T>`, `HashMap<String, T>`, `BTreeMap<String, T>` are handled.
+Please add `#[toml_example(nesting)]`, or `#[toml_example(nesting = prefix)]` on the field.
+
+```rust
+  /// Service with specific port
+  #[derive(TomlExample)]
+  struct Service {
+      /// port should be a number
+      port: usize,
+  }
+  #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+  #[allow(dead_code)]
+  struct Node {
+      /// Services are running in the node
+      #[toml_example(nesting)]
+      services: HashMap<String, Service>,
+  }
+```
+`Node::toml_example()` will be following string.
+```toml
+# Services are running in the node
+# Service with specific port
+[services.example]
+# port should be a number
+port = 0
+
+```
+
 ## Will do later
-- nesting structure
+- Set key for dict type nesting struct
 
 [crates-badge]: https://img.shields.io/crates/v/toml-example.svg
 [crate-url]: https://crates.io/crates/toml-example
