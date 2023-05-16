@@ -204,7 +204,17 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                     if let Some(field_type) = field_type {
                         field_example.push_str("\"#.to_string()");
                         field_example.push_str(&format!(
-                            " + &{field_type}::toml_field_example(\"[{field_name:}]\n\")"
+                            " + &{field_type}::toml_field_example(\"[{field_name:}]\n\", \"\")"
+                        ));
+                        field_example.push_str(" + &r#\"");
+                    } else {
+                        abort!(&f.ident, "nesting only work on inner structure")
+                    }
+                } else if nesting_format == Some(NestingFormat::Prefix) {
+                    if let Some(field_type) = field_type {
+                        field_example.push_str("\"#.to_string()");
+                        field_example.push_str(&format!(
+                            " + &{field_type}::toml_field_example(\"\", \"{field_name:}.\")"
                         ));
                         field_example.push_str(" + &r#\"");
                     } else {
@@ -216,16 +226,19 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                     }
                     match default {
                         DefaultSource::DefaultValue(default) => {
+                            field_example.push_str("\"#.to_string() + prefix + &r#\"");
                             field_example.push_str(&field_name);
                             field_example.push_str(" = ");
                             field_example.push_str(&default);
                             field_example.push('\n');
                         }
                         DefaultSource::DefaultFn(None) => {
+                            field_example.push_str("\"#.to_string() + prefix + &r#\"");
                             field_example.push_str(&field_name);
                             field_example.push_str(" = \"\"\n");
                         }
                         DefaultSource::DefaultFn(Some(ty)) => {
+                            field_example.push_str("\"#.to_string() + prefix + &r#\"");
                             field_example.push_str(&field_name);
                             field_example.push_str(" = \"#.to_string()");
                             field_example
@@ -233,6 +246,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                             field_example.push_str(" + &r#\"\n");
                         }
                         DefaultSource::SerdeDefaultFn(fn_str) => {
+                            field_example.push_str("\"#.to_string() + prefix + &r#\"");
                             field_example.push_str(&field_name);
                             field_example.push_str(" = \"#.to_string()");
                             field_example
@@ -256,9 +270,9 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
     let output = quote! {
         impl toml_example::TomlExample for #struct_name {
             fn toml_example() -> String {
-                #struct_name::toml_field_example("")
+                #struct_name::toml_field_example("", "")
             }
-            fn toml_field_example(lable: &str) -> String {
+            fn toml_field_example(lable: &str, prefix: &str) -> String {
                 #struct_doc_stream + lable + &#field_example_stream
             }
         }

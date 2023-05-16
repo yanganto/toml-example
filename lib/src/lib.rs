@@ -302,36 +302,36 @@ a = 0
         );
     }
 
-    // #[test]
-    // fn nesting_by_prefix() {
-    //     /// Inner is a config live in Outer
-    //     #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
-    //     #[allow(dead_code)]
-    //     struct Inner {
-    //         /// Inner.a should be a number
-    //         a: usize,
-    //     }
-    //     #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
-    //     #[allow(dead_code)]
-    //     struct Outer {
-    //         /// Outer.inner is a complex sturct
-    //         #[toml_example(nesting = prefix)]
-    //         inner: Inner,
-    //     }
-    //     assert_eq!(
-    //         Outer::toml_example(),
-    //         r#"# Outer.inner is a complex sturct
-    // # Inner is a config live in Outer
-    // # Inner.a should be a number
-    // inner.a = 0
+    #[test]
+    fn nesting_by_prefix() {
+        /// Inner is a config live in Outer
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Inner {
+            /// Inner.a should be a number
+            a: usize,
+        }
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Outer {
+            /// Outer.inner is a complex sturct
+            #[toml_example(nesting = prefix)]
+            inner: Inner,
+        }
+        assert_eq!(
+            Outer::toml_example(),
+            r#"# Outer.inner is a complex sturct
+# Inner is a config live in Outer
+# Inner.a should be a number
+inner.a = 0
 
-    // "#
-    //     );
-    //     assert_eq!(
-    //         toml::from_str::<Outer>(&Outer::toml_example()).unwrap(),
-    //         Outer::default()
-    //     );
-    // }
+"#
+        );
+        assert_eq!(
+            toml::from_str::<Outer>(&Outer::toml_example()).unwrap(),
+            Outer::default()
+        );
+    }
 
     // #[test]
     // fn nesting_vector() {
