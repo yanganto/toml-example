@@ -23,6 +23,12 @@ enum DefaultSource {
     SerdeDefaultFn(String),
 }
 
+#[derive(PartialEq)]
+enum NestingFormat {
+    Section,
+    Prefix,
+}
+
 fn default_value(ty: String) -> String {
     match ty.as_str() {
         "usize" | "u8" | "u16" | "u32" | "u64" | "u128" | "isize" | "i8" | "i16" | "i32"
@@ -74,9 +80,11 @@ fn parse_type(ty: &Type, default: &mut String, optional: &mut bool) -> Option<St
     r#type
 }
 
-fn parse_doc_default_attrs(attrs: &[Attribute]) -> (Vec<String>, Option<DefaultSource>) {
+/// return (doc, default, nesting)
+fn parse_attrs(attrs: &[Attribute]) -> (Vec<String>, Option<DefaultSource>, Option<NestingFormat>) {
     let mut docs = Vec::new();
     let mut default_source = None;
+    let mut nesting_format = None;
     for attr in attrs.iter() {
         match (attr.style, &attr.meta) {
             (Outer, NameValue(MetaNameValue { path, value, .. })) => {
@@ -131,18 +139,28 @@ fn parse_doc_default_attrs(attrs: &[Attribute]) -> (Vec<String>, Option<DefaultS
                     } else {
                         default_source = Some(DefaultSource::DefaultFn(None));
                     }
+                } else if token_str.starts_with("nesting") {
+                    if let Some((_, s)) = token_str.split_once(" = ") {
+                        nesting_format = match s {
+                            "prefix" => Some(NestingFormat::Prefix),
+                            "section" => Some(NestingFormat::Section),
+                            _ => abort!(&attr, "please use prefix or section for nesting derive"),
+                        }
+                    } else {
+                        nesting_format = Some(NestingFormat::Section);
+                    }
                 }
             }
             _ => (),
         }
     }
-    (docs, default_source)
+    (docs, default_source, nesting_format)
 }
 
-fn get_default_and_doc_from_field(field: &Field) -> (DefaultSource, Vec<String>, bool) {
+fn parse_field(field: &Field) -> (DefaultSource, Vec<String>, bool, Option<NestingFormat>) {
     let mut default_value = String::new();
     let mut optional = false;
-    let (docs, default_source) = parse_doc_default_attrs(&field.attrs);
+    let (docs, default_source, nesting_format) = parse_attrs(&field.attrs);
     let ty = parse_type(&field.ty, &mut default_value, &mut optional);
     let default_source = match default_source {
         Some(DefaultSource::DefaultFn(_)) => DefaultSource::DefaultFn(ty),
@@ -150,7 +168,7 @@ fn get_default_and_doc_from_field(field: &Field) -> (DefaultSource, Vec<String>,
         Some(DefaultSource::DefaultValue(v)) => DefaultSource::DefaultValue(v),
         _ => DefaultSource::DefaultValue(default_value),
     };
-    (default_source, docs, optional)
+    (default_source, docs, optional, nesting_format)
 }
 
 fn push_doc_string(example: &mut String, docs: Vec<String>, paragraph: bool) {
@@ -172,7 +190,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(item as syn::DeriveInput);
     let struct_name = &input.ident;
     let mut example = "r#\"".to_string();
-    push_doc_string(&mut example, parse_doc_default_attrs(&input.attrs).0, true);
+    push_doc_string(&mut example, parse_attrs(&input.attrs).0, true);
 
     let fields = if let syn::Data::Struct(syn::DataStruct { fields, .. }) = &input.data {
         fields
@@ -181,35 +199,46 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
     };
     if let Named(fields_named) = fields {
         for f in fields_named.named.iter() {
+            let field_type = parse_type(&f.ty, &mut String::new(), &mut false);
             if let Some(field_name) = f.ident.as_ref().map(|i| i.to_string()) {
-                let (default, doc_str, optional) = get_default_and_doc_from_field(f);
+                let (default, doc_str, optional, nesting_format) = parse_field(f);
                 push_doc_string(&mut example, doc_str, false);
 
-                if optional {
-                    example.push_str("# ");
-                }
-                match default {
-                    DefaultSource::DefaultValue(default) => {
-                        example.push_str(&field_name);
-                        example.push_str(" = ");
-                        example.push_str(&default);
-                        example.push('\n');
+                if nesting_format == Some(NestingFormat::Section) {
+                    if let Some(field_type) = field_type {
+                        example.push_str(&format!("[{field_name:}]\n\"#.to_string()"));
+                        example.push_str(&format!(" + &{field_type}::toml_example()"));
+                        example.push_str(" + &r#\"");
+                    } else {
+                        abort!(&f.ident, "nesting only work on inner sturcture")
                     }
-                    DefaultSource::DefaultFn(None) => {
-                        example.push_str(&field_name);
-                        example.push_str(" = \"\"\n");
+                } else {
+                    if optional {
+                        example.push_str("# ");
                     }
-                    DefaultSource::DefaultFn(Some(ty)) => {
-                        example.push_str(&field_name);
-                        example.push_str(" = \"#.to_string()");
-                        example.push_str(&format!(" + &format!(\"{{:?}}\",  {ty}::default())"));
-                        example.push_str(" + &r#\"\n");
-                    }
-                    DefaultSource::SerdeDefaultFn(fn_str) => {
-                        example.push_str(&field_name);
-                        example.push_str(" = \"#.to_string()");
-                        example.push_str(&format!(" + &format!(\"{{:?}}\",  {fn_str}())"));
-                        example.push_str("+ &r#\"\n");
+                    match default {
+                        DefaultSource::DefaultValue(default) => {
+                            example.push_str(&field_name);
+                            example.push_str(" = ");
+                            example.push_str(&default);
+                            example.push('\n');
+                        }
+                        DefaultSource::DefaultFn(None) => {
+                            example.push_str(&field_name);
+                            example.push_str(" = \"\"\n");
+                        }
+                        DefaultSource::DefaultFn(Some(ty)) => {
+                            example.push_str(&field_name);
+                            example.push_str(" = \"#.to_string()");
+                            example.push_str(&format!(" + &format!(\"{{:?}}\",  {ty}::default())"));
+                            example.push_str(" + &r#\"\n");
+                        }
+                        DefaultSource::SerdeDefaultFn(fn_str) => {
+                            example.push_str(&field_name);
+                            example.push_str(" = \"#.to_string()");
+                            example.push_str(&format!(" + &format!(\"{{:?}}\",  {fn_str}())"));
+                            example.push_str("+ &r#\"\n");
+                        }
                     }
                 }
             }
