@@ -97,7 +97,7 @@ Please add `#[toml_example(nesting)]`, or `#[toml_example(nesting = prefix)]` on
       #[toml_example(default = 80)]
       port: usize,
   }
-  #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+  #[derive(TomlExample)]
   #[allow(dead_code)]
   struct Node {
       /// Services are running in the node
@@ -115,9 +115,6 @@ Please add `#[toml_example(nesting)]`, or `#[toml_example(nesting = prefix)]` on
 port = 80
 
 ```
-
-## Will do later
-- Set key for dict type nesting struct
 
 [crates-badge]: https://img.shields.io/crates/v/toml-example.svg
 [crate-url]: https://crates.io/crates/toml-example
