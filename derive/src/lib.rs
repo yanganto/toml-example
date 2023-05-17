@@ -224,8 +224,9 @@ fn push_doc_string(example: &mut String, docs: Vec<String>) {
 
 fn default_key(default: DefaultSource) -> String {
     if let DefaultSource::DefaultValue(v) = default {
-        if !v.trim_matches('\"').is_empty() {
-            return v.trim_matches('\"').to_string();
+        let key = v.trim_matches('\"').replace(' ', "").replace('.', "-");
+        if !key.is_empty() {
+            return key;
         }
     }
     "example".into()

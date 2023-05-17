@@ -545,7 +545,7 @@ port = 0
     }
 
     #[test]
-    fn nesting_hashmap_with_example_name() {
+    fn nesting_hashmap_with_default_name() {
         /// Service with specific port
         #[derive(TomlExample, Deserialize)]
         #[allow(dead_code)]
@@ -567,6 +567,37 @@ port = 0
             r#"# Services are running in the node
 # Service with specific port
 [services.http]
+# port should be a number
+port = 80
+
+"#
+        );
+        assert!(toml::from_str::<Node>(&Node::toml_example()).is_ok());
+    }
+
+    #[test]
+    fn nesting_hashmap_with_dash_name() {
+        /// Service with specific port
+        #[derive(TomlExample, Deserialize)]
+        #[allow(dead_code)]
+        struct Service {
+            /// port should be a number
+            #[toml_example(default = 80)]
+            port: usize,
+        }
+        #[derive(TomlExample, Deserialize)]
+        #[allow(dead_code)]
+        struct Node {
+            /// Services are running in the node
+            #[toml_example(nesting)]
+            #[toml_example(default = http.01)]
+            services: HashMap<String, Service>,
+        }
+        assert_eq!(
+            Node::toml_example(),
+            r#"# Services are running in the node
+# Service with specific port
+[services.http-01]
 # port should be a number
 port = 80
 
