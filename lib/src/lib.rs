@@ -1,3 +1,89 @@
+//! This crate provides the [`TomlExample`] trait and an accompanying derive macro.
+//!
+//! Deriving [`TomlExample`] on a struct will generate functions `toml_example()`,  `to_toml_example(file_name)` for generating toml example content.
+//!
+//! The following code shows how `toml-example` can be used.
+//! ```rust
+//! use toml_example::TomlExample;
+//!
+//! /// Config is to arrange something or change the controls on a computer or other device
+//! /// so that it can be used in a particular way
+//! #[derive(TomlExample)]
+//! struct Config {
+//! /// Config.a should be a number
+//! a: usize,
+//! /// Config.b should be a string
+//! b: String,
+//! /// Optional Config.c is a number
+//! c: Option<usize>,
+//! /// Config.d is a list of number
+//! d: Vec<usize>,
+//! #[toml_example(default =7)]
+//! e: usize,
+//! /// Config.f should be a string
+//! #[toml_example(default = "seven")]
+//! f: String,
+//! }
+//! assert_eq!( Config::toml_example(),
+//! r#"# Config is to arrange something or change the controls on a computer or other device
+//! ## so that it can be used in a particular way
+//! ## Config.a should be a number
+//! a = 0
+//!
+//! ## Config.b should be a string
+//! b = ""
+//!
+//! ## Optional Config.c is a number
+//! ## c = 0
+//!
+//! ## Config.d is a list of number
+//! d = [ 0, ]
+//!
+//! e = 7
+//!
+//! ## Config.f should be a string
+//! f = "seven"
+//!
+//! "#);
+//! ```
+//!
+//! Also, toml-example will use `#[serde(default)]`, `#[serde(default = "default_fn")]` for the
+//! example value.
+//!
+//! With nestring structure, `#[toml_example(nesting)]` should set on the field as following
+//! example.
+//!
+//! ```rust
+//! use std::collections::HashMap;
+//! use toml_example::TomlExample;
+//!
+//! /// Service with specific port
+//! #[derive(TomlExample)]
+//! struct Service {
+//! /// port should be a number
+//! #[toml_example(default = 80)]
+//!     port: usize,
+//! }
+//! #[derive(TomlExample)]
+//! #[allow(dead_code)]
+//! struct Node {
+//!     /// Services are running in the node
+//!     #[toml_example(nesting)]
+//!     #[toml_example(default = http)]
+//!     services: HashMap<String, Service>,
+//! }
+//!
+//! assert_eq!(Node::toml_example(),
+//! r#"# Services are running in the node
+//! ## Service with specific port
+//! [services.http]
+//! ## port should be a number
+//! port = 80
+//!
+//! "#);
+//! ```
+//!
+
 #[doc(hidden)]
 pub use toml_example_derive::TomlExample;
 pub mod traits;
