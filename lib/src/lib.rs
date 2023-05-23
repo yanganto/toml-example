@@ -285,6 +285,17 @@ d = ""
             #[serde(default = "default_str")]
             #[toml_example(default = "default")]
             c: String,
+            #[toml_example(default = [ "default", ])]
+            e: Vec<String>,
+            #[toml_example(
+                default = "super looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong string"
+            )]
+            f: String,
+            #[toml_example(default = [ "super looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong string",
+               "second",
+               "third",
+            ])]
+            g: Vec<String>,
         }
         assert_eq!(
             Config::toml_example(),
@@ -295,6 +306,13 @@ a = 7
 b = "seven"
 
 c = "default"
+
+e = ["default",]
+
+f = "super looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong string"
+
+g = ["super looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong string",
+"second", "third",]
 
 "#
         );
