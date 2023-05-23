@@ -172,14 +172,14 @@ fn parse_attrs(attrs: &[Attribute]) -> (Vec<String>, Option<DefaultSource>, Opti
             {
                 let token_str = tokens.to_string();
                 if token_str.starts_with("default") {
-                    if let Some(s) = token_str.split_once(" = ") {
-                        default_source = Some(DefaultSource::DefaultValue(s.1.into()));
+                    if let Some((_, s)) = token_str.split_once("=") {
+                        default_source = Some(DefaultSource::DefaultValue(s.trim().into()));
                     } else {
                         default_source = Some(DefaultSource::DefaultFn(None));
                     }
                 } else if token_str.starts_with("nesting") {
-                    if let Some((_, s)) = token_str.split_once(" = ") {
-                        nesting_format = match s {
+                    if let Some((_, s)) = token_str.split_once("=") {
+                        nesting_format = match s.trim() {
                             "prefix" => Some(NestingFormat::Prefix),
                             "section" => Some(NestingFormat::Section(NestingType::None)),
                             _ => abort!(&attr, "please use prefix or section for nesting derive"),
