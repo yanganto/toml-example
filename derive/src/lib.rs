@@ -155,8 +155,9 @@ fn parse_attrs(attrs: &[Attribute]) -> (Vec<String>, Option<DefaultSource>, Opti
                     let token_str = _tokens.to_string();
                     if token_str.starts_with("default") {
                         if let Some((_, s)) = token_str.split_once("=") {
-                            default_source =
-                                Some(DefaultSource::SerdeDefaultFn(s.trim().trim_matches('"').into()));
+                            default_source = Some(DefaultSource::SerdeDefaultFn(
+                                s.trim().trim_matches('"').into(),
+                            ));
                         } else {
                             default_source = Some(DefaultSource::DefaultFn(None));
                         }
