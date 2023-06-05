@@ -118,11 +118,19 @@ fn parse_type(
     r#type
 }
 
-/// return (doc, default, nesting)
-fn parse_attrs(attrs: &[Attribute]) -> (Vec<String>, Option<DefaultSource>, Option<NestingFormat>) {
+/// return (doc, default, nesting, require)
+fn parse_attrs(
+    attrs: &[Attribute],
+) -> (
+    Vec<String>,
+    Option<DefaultSource>,
+    Option<NestingFormat>,
+    bool,
+) {
     let mut docs = Vec::new();
     let mut default_source = None;
     let mut nesting_format = None;
+    let mut require = false;
     for attr in attrs.iter() {
         match (attr.style, &attr.meta) {
             (Outer, NameValue(MetaNameValue { path, value, .. })) => {
@@ -188,18 +196,22 @@ fn parse_attrs(attrs: &[Attribute]) -> (Vec<String>, Option<DefaultSource>, Opti
                     } else {
                         nesting_format = Some(NestingFormat::Section(NestingType::None));
                     }
+                } else if token_str.starts_with("require") {
+                    require = true;
+                } else {
+                    abort!(&attr, format!("{} is not allowed attribute", token_str))
                 }
             }
             _ => (),
         }
     }
-    (docs, default_source, nesting_format)
+    (docs, default_source, nesting_format, require)
 }
 
 fn parse_field(field: &Field) -> (DefaultSource, Vec<String>, bool, Option<NestingFormat>) {
     let mut default_value = String::new();
     let mut optional = false;
-    let (docs, default_source, mut nesting_format) = parse_attrs(&field.attrs);
+    let (docs, default_source, mut nesting_format, require) = parse_attrs(&field.attrs);
     let ty = parse_type(
         &field.ty,
         &mut default_value,
@@ -212,7 +224,7 @@ fn parse_field(field: &Field) -> (DefaultSource, Vec<String>, bool, Option<Nesti
         Some(DefaultSource::DefaultValue(v)) => DefaultSource::DefaultValue(v),
         _ => DefaultSource::DefaultValue(default_value),
     };
-    (default_source, docs, optional, nesting_format)
+    (default_source, docs, optional && !require, nesting_format)
 }
 
 fn push_doc_string(example: &mut String, docs: Vec<String>) {

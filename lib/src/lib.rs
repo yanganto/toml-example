@@ -83,6 +83,33 @@
 //! "#);
 //! ```
 //!
+//! If you want an optional field become a required field in example,
+//! place the `#[toml_example(require)]` on the field.
+//! ```rust
+//! use toml_example::TomlExample;
+//! #[derive(TomlExample)]
+//! struct Config {
+//!     /// Config.a is an optional number
+//!     #[toml_example(require)]
+//!     a: Option<usize>,
+//!     /// Config.b is an optional string
+//!     #[toml_example(require)]
+//!     b: Option<String>,
+//!     #[toml_example(require)]
+//!     #[toml_example(default = "third")]
+//!     c: Option<String>,
+//! }
+//! assert_eq!(Config::toml_example(),
+//! r#"# Config.a is an optional number
+//! a = 0
+//!
+//! ## Config.b is an optional string
+//! b = ""
+//!
+//! c = "third"
+//!
+//! "#)
+//! ```
 
 #[doc(hidden)]
 pub use toml_example_derive::TomlExample;
@@ -708,5 +735,34 @@ port = 80
 "#
         );
         assert!(toml::from_str::<Node>(&Node::toml_example()).is_ok());
+    }
+
+    #[test]
+    fn require() {
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Config {
+            /// Config.a is an optional number
+            #[toml_example(require)]
+            a: Option<usize>,
+            /// Config.b is an optional string
+            #[toml_example(require)]
+            b: Option<String>,
+            #[toml_example(require)]
+            #[toml_example(default = "third")]
+            c: Option<String>,
+        }
+        assert_eq!(
+            Config::toml_example(),
+            r#"# Config.a is an optional number
+a = 0
+
+# Config.b is an optional string
+b = ""
+
+c = "third"
+
+"#
+        );
     }
 }

@@ -115,6 +115,33 @@ Please add `#[toml_example(nesting)]`, or `#[toml_example(nesting = prefix)]` on
 port = 80
 
 ```
+If you want an optional field become a required field in example,
+place the `#[toml_example(require)]` on the field.
+```rust
+use toml_example::TomlExample;
+#[derive(TomlExample)]
+struct Config {
+    /// Config.a is an optional number
+    #[toml_example(require)]
+    a: Option<usize>,
+    /// Config.b is an optional string
+    #[toml_example(require)]
+    b: Option<String>,
+    #[toml_example(require)]
+    #[toml_example(default = "third")]
+    c: Option<String>,
+}
+```
+```toml
+# Config.a is an optional number
+a = 0
+
+# Config.b is an optional string
+b = ""
+
+c = "third"
+
+```
 
 [crates-badge]: https://img.shields.io/crates/v/toml-example.svg
 [crate-url]: https://crates.io/crates/toml-example
