@@ -85,6 +85,8 @@
 //!
 //! If you want an optional field become a required field in example,
 //! place the `#[toml_example(require)]` on the field.
+//! If you want to skip some field you can use `#[toml_example(skip)]`,
+//! the `#[serde(skip)]`, `#[serde(skip_deserializing)]` also works.
 //! ```rust
 //! use toml_example::TomlExample;
 //! #[derive(TomlExample)]
@@ -98,6 +100,8 @@
 //!     #[toml_example(require)]
 //!     #[toml_example(default = "third")]
 //!     c: Option<String>,
+//!     #[toml_example(skip)]
+//!     d: usize,
 //! }
 //! assert_eq!(Config::toml_example(),
 //! r#"# Config.a is an optional number
