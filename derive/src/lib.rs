@@ -118,7 +118,7 @@ fn parse_type(
     r#type
 }
 
-/// return (doc, default, nesting, require)
+/// return (doc, default, nesting, require, skip)
 fn parse_attrs(
     attrs: &[Attribute],
 ) -> (
@@ -126,11 +126,13 @@ fn parse_attrs(
     Option<DefaultSource>,
     Option<NestingFormat>,
     bool,
+    bool,
 ) {
     let mut docs = Vec::new();
     let mut default_source = None;
     let mut nesting_format = None;
     let mut require = false;
+    let mut skip = false;
     for attr in attrs.iter() {
         match (attr.style, &attr.meta) {
             (Outer, NameValue(MetaNameValue { path, value, .. })) => {
@@ -170,6 +172,9 @@ fn parse_attrs(
                             default_source = Some(DefaultSource::DefaultFn(None));
                         }
                     }
+                    if token_str == "skip_deserializing" || token_str == "skip" {
+                        skip = true;
+                    }
                 }
             }
             (Outer, List(MetaList { path, tokens, .. }))
@@ -196,8 +201,10 @@ fn parse_attrs(
                     } else {
                         nesting_format = Some(NestingFormat::Section(NestingType::None));
                     }
-                } else if token_str.starts_with("require") {
+                } else if token_str == "require" {
                     require = true;
+                } else if token_str == "skip" {
+                    skip = true;
                 } else {
                     abort!(&attr, format!("{} is not allowed attribute", token_str))
                 }
@@ -205,13 +212,21 @@ fn parse_attrs(
             _ => (),
         }
     }
-    (docs, default_source, nesting_format, require)
+    (docs, default_source, nesting_format, require, skip)
 }
 
-fn parse_field(field: &Field) -> (DefaultSource, Vec<String>, bool, Option<NestingFormat>) {
+fn parse_field(
+    field: &Field,
+) -> (
+    DefaultSource,
+    Vec<String>,
+    bool,
+    Option<NestingFormat>,
+    bool,
+) {
     let mut default_value = String::new();
     let mut optional = false;
-    let (docs, default_source, mut nesting_format, require) = parse_attrs(&field.attrs);
+    let (docs, default_source, mut nesting_format, require, skip) = parse_attrs(&field.attrs);
     let ty = parse_type(
         &field.ty,
         &mut default_value,
@@ -224,7 +239,13 @@ fn parse_field(field: &Field) -> (DefaultSource, Vec<String>, bool, Option<Nesti
         Some(DefaultSource::DefaultValue(v)) => DefaultSource::DefaultValue(v),
         _ => DefaultSource::DefaultValue(default_value),
     };
-    (default_source, docs, optional && !require, nesting_format)
+    (
+        default_source,
+        docs,
+        optional && !require,
+        nesting_format,
+        skip,
+    )
 }
 
 fn push_doc_string(example: &mut String, docs: Vec<String>) {
@@ -263,7 +284,10 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
         for f in fields_named.named.iter() {
             let field_type = parse_type(&f.ty, &mut String::new(), &mut false, &mut None);
             if let Some(field_name) = f.ident.as_ref().map(|i| i.to_string()) {
-                let (default, doc_str, optional, nesting_format) = parse_field(f);
+                let (default, doc_str, optional, nesting_format, skip) = parse_field(f);
+                if skip {
+                    continue;
+                }
                 push_doc_string(&mut field_example, doc_str);
 
                 if nesting_format

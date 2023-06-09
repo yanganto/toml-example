@@ -765,4 +765,27 @@ c = "third"
 "#
         );
     }
+
+    #[test]
+    fn skip() {
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Config {
+            /// Config.a is a number
+            a: usize,
+            #[toml_example(skip)]
+            b: usize,
+            #[serde(skip)]
+            c: usize,
+            #[serde(skip_deserializing)]
+            d: usize,
+        }
+        assert_eq!(
+            Config::toml_example(),
+            r#"# Config.a is a number
+a = 0
+
+"#
+        );
+    }
 }
