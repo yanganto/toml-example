@@ -836,4 +836,21 @@ a = ""
 "#
         );
     }
+
+    #[test]
+    fn rename() {
+        use serde::Serialize;
+
+        #[derive(Deserialize, Serialize, TomlExample)]
+        struct Config {
+            #[serde(rename = "bb")]
+            b: usize,
+        }
+        assert_eq!(
+            Config::toml_example(),
+            r#"bb = 0
+
+"#
+        );
+    }
 }
