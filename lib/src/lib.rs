@@ -792,4 +792,21 @@ a = 0
 "#
         );
     }
+
+    #[test]
+    fn r_sharp_field() {
+        #[derive(TomlExample)]
+        #[allow(dead_code)]
+        struct Config {
+            /// Config.type is a number
+            r#type: usize,
+        }
+        assert_eq!(
+            Config::toml_example(),
+            r#"# Config.type is a number
+type = 0
+
+"#
+        );
+    }
 }

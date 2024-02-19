@@ -345,7 +345,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                     match default {
                         DefaultSource::DefaultValue(default) => {
                             field_example.push_str("\"#.to_string() + prefix + &r#\"");
-                            field_example.push_str(&field_name);
+                            field_example.push_str(field_name.trim_start_matches("r#"));
                             field_example.push_str(" = ");
                             field_example.push_str(&default);
                             field_example.push('\n');
