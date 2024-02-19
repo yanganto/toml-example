@@ -15,6 +15,7 @@ use syn::{
     Meta::{List, NameValue},
     MetaList, MetaNameValue, PathArguments, PathSegment, Type, TypePath,
 };
+mod case;
 
 #[derive(Debug)]
 enum DefaultSource {
@@ -109,7 +110,8 @@ fn parse_type(
     r#type
 }
 
-/// return (doc, default, nesting, require, skip, rename)
+#[allow(clippy::type_complexity)]
+/// return (doc, default, nesting, require, skip, rename, rename_rule)
 fn parse_attrs(
     attrs: &[Attribute],
 ) -> (
@@ -119,6 +121,7 @@ fn parse_attrs(
     bool,
     bool,
     Option<String>,
+    case::RenameRule,
 ) {
     let mut docs = Vec::new();
     let mut default_source = None;
@@ -126,6 +129,7 @@ fn parse_attrs(
     let mut require = false;
     let mut skip = false;
     let mut rename = None;
+    let mut rename_rule = case::RenameRule::None;
 
     for attr in attrs.iter() {
         match (attr.style, &attr.meta) {
@@ -170,7 +174,17 @@ fn parse_attrs(
                         skip = true;
                     }
                     if token_str.starts_with("rename") {
-                        if let Some((_, s)) = token_str.split_once('=') {
+                        if token_str.starts_with("rename_all") {
+                            if let Some((_, s)) = token_str.split_once('=') {
+                                rename_rule = if let Ok(r) =
+                                    case::RenameRule::from_str(s.trim().trim_matches('"'))
+                                {
+                                    r
+                                } else {
+                                    abort!(&_tokens, "unsupport rename rule")
+                                }
+                            }
+                        } else if let Some((_, s)) = token_str.split_once('=') {
                             rename = Some(s.trim().trim_matches('"').into());
                         }
                     }
@@ -211,7 +225,15 @@ fn parse_attrs(
             _ => (),
         }
     }
-    (docs, default_source, nesting_format, require, skip, rename)
+    (
+        docs,
+        default_source,
+        nesting_format,
+        require,
+        skip,
+        rename,
+        rename_rule,
+    )
 }
 
 fn parse_field(
@@ -226,7 +248,7 @@ fn parse_field(
 ) {
     let mut default_value = String::new();
     let mut optional = false;
-    let (docs, default_source, mut nesting_format, require, skip, rename) =
+    let (docs, default_source, mut nesting_format, require, skip, rename, _) =
         parse_attrs(&field.attrs);
     let ty = parse_type(
         &field.ty,
@@ -279,7 +301,8 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
     let mut field_example = "r#\"".to_string();
     let mut nesting_field_example = "".to_string();
 
-    push_doc_string(&mut struct_doc, parse_attrs(&input.attrs).0);
+    let (doc, _, _, _, _, _, rename_rule) = parse_attrs(&input.attrs);
+    push_doc_string(&mut struct_doc, doc);
 
     let fields = if let syn::Data::Struct(syn::DataStruct { fields, .. }) = &input.data {
         fields
@@ -296,6 +319,8 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                 }
                 if let Some(rename) = rename {
                     field_name = rename;
+                } else {
+                    field_name = rename_rule.apply_to_field(&field_name);
                 }
                 push_doc_string(&mut field_example, doc_str);
 

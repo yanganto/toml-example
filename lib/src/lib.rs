@@ -853,4 +853,21 @@ a = ""
 "#
         );
     }
+
+    #[test]
+    fn rename_all() {
+        use serde::Serialize;
+
+        #[derive(Deserialize, Serialize, TomlExample)]
+        #[serde(rename_all = "kebab-case")]
+        struct Config {
+            a_a: usize,
+        }
+        assert_eq!(
+            Config::toml_example(),
+            r#"a-a = 0
+
+"#
+        );
+    }
 }
