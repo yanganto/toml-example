@@ -37,15 +37,6 @@ enum NestingFormat {
     Prefix,
 }
 
-impl NestingFormat {
-    fn is_section(&self) -> bool {
-        match self {
-            NestingFormat::Section(_) => true,
-            _ => false,
-        }
-    }
-}
-
 fn default_value(ty: String) -> String {
     match ty.as_str() {
         "usize" | "u8" | "u16" | "u32" | "u64" | "u128" | "isize" | "i8" | "i16" | "i32"
@@ -164,7 +155,7 @@ fn parse_attrs(
                 {
                     let token_str = _tokens.to_string();
                     if token_str.starts_with("default") {
-                        if let Some((_, s)) = token_str.split_once("=") {
+                        if let Some((_, s)) = token_str.split_once('=') {
                             default_source = Some(DefaultSource::SerdeDefaultFn(
                                 s.trim().trim_matches('"').into(),
                             ));
@@ -186,13 +177,13 @@ fn parse_attrs(
             {
                 let token_str = tokens.to_string();
                 if token_str.starts_with("default") {
-                    if let Some((_, s)) = token_str.split_once("=") {
+                    if let Some((_, s)) = token_str.split_once('=') {
                         default_source = Some(DefaultSource::DefaultValue(s.trim().into()));
                     } else {
                         default_source = Some(DefaultSource::DefaultFn(None));
                     }
                 } else if token_str.starts_with("nesting") {
-                    if let Some((_, s)) = token_str.split_once("=") {
+                    if let Some((_, s)) = token_str.split_once('=') {
                         nesting_format = match s.trim() {
                             "prefix" => Some(NestingFormat::Prefix),
                             "section" => Some(NestingFormat::Section(NestingType::None)),
@@ -292,7 +283,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
 
                 if nesting_format
                     .as_ref()
-                    .map(|f| f.is_section())
+                    .map(|f| matches!(f, NestingFormat::Section(_)))
                     .unwrap_or_default()
                 {
                     if let Some(field_type) = field_type {
