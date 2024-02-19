@@ -181,7 +181,7 @@ fn parse_attrs(
                                 {
                                     r
                                 } else {
-                                    abort!(&_tokens, "unsupport rename rule")
+                                    abort!(&_tokens, "unsupported rename rule")
                                 }
                             }
                         } else if let Some((_, s)) = token_str.split_once('=') {
