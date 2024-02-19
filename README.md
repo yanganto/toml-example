@@ -10,6 +10,8 @@ This crate provides the `TomlExample` trait and an accompanying derive macro.
 
 Deriving `TomlExample` on a struct will provide `to_example` function help generate toml example file base documentation
 - support `#[serde(default)]`, `#[serde(default = "function_name")]` attributes (`serde` feature, opt-in)
+- support `#[serde(rename)]`, `#[serde(rename_all = "renaming rules")]`, the renaming rules can be `lowercase`, `UPPERCASE`,
+`PascalCase`, `camelCase`, `snake_case`, `SCREAMING_SNAKE_CASE`, `kebab-case`, `SCREAMING-KEBAB-CASE`
 - provide `#[toml_example(default)]`, `#[toml_example(default = 0)]`, `#[toml_example(default = "default_string")]` attributes
 - The order matter of attribute macro, if `#[serde(default = ..]` and `#[toml_example(default = ..)]` existing at the same time with different value
 
