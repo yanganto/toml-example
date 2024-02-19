@@ -263,7 +263,11 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(item as syn::DeriveInput);
     let struct_name = &input.ident;
     let mut struct_doc = "r#\"".to_string();
+
+    // Nesting field example will be append after the non nesting field example to avoid #18
     let mut field_example = "r#\"".to_string();
+    let mut nesting_field_example = "".to_string();
+
     push_doc_string(&mut struct_doc, parse_attrs(&input.attrs).0);
 
     let fields = if let syn::Data::Struct(syn::DataStruct { fields, .. }) = &input.data {
@@ -287,29 +291,29 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                     .unwrap_or_default()
                 {
                     if let Some(field_type) = field_type {
-                        field_example.push_str("\"#.to_string()");
+                        nesting_field_example.push_str("\"#.to_string()");
                         let key = default_key(default);
                         match nesting_format {
-                            Some(NestingFormat::Section(NestingType::Vec)) if optional => field_example.push_str(&format!(
+                            Some(NestingFormat::Section(NestingType::Vec)) if optional => nesting_field_example.push_str(&format!(
                                 " + &{field_type}::toml_field_example(\"# [[{field_name:}]]\n\", \"# \")"
                             )),
-                            Some(NestingFormat::Section(NestingType::Vec)) => field_example.push_str(&format!(
+                            Some(NestingFormat::Section(NestingType::Vec)) => nesting_field_example.push_str(&format!(
                                 " + &{field_type}::toml_field_example(\"[[{field_name:}]]\n\", \"\")"
                             )),
-                            Some(NestingFormat::Section(NestingType::Dict)) if optional => field_example.push_str(&format!(
+                            Some(NestingFormat::Section(NestingType::Dict)) if optional => nesting_field_example.push_str(&format!(
                                 " + &{field_type}::toml_field_example(\"# [{field_name:}.{key}]\n\", \"# \")"
                             )),
-                            Some(NestingFormat::Section(NestingType::Dict)) => field_example.push_str(&format!(
+                            Some(NestingFormat::Section(NestingType::Dict)) => nesting_field_example.push_str(&format!(
                                 " + &{field_type}::toml_field_example(\"[{field_name:}.{key}]\n\", \"\")"
                             )),
-                            _ if optional => field_example.push_str(&format!(
+                            _ if optional => nesting_field_example.push_str(&format!(
                                 " + &{field_type}::toml_field_example(\"# [{field_name:}]\n\", \"# \")"
                             )),
-                            _ => field_example.push_str(&format!(
+                            _ => nesting_field_example.push_str(&format!(
                                 " + &{field_type}::toml_field_example(\"[{field_name:}]\n\", \"\")"
                             ))
                         };
-                        field_example.push_str(" + &r#\"");
+                        nesting_field_example.push_str(" + &r#\"");
                     } else {
                         abort!(&f.ident, "nesting only work on inner structure")
                     }
@@ -369,6 +373,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
         }
     }
     struct_doc.push_str("\"#.to_string()");
+    field_example += &nesting_field_example;
     field_example.push_str("\"#.to_string()");
 
     let struct_doc_stream: proc_macro2::TokenStream =
