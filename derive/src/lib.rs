@@ -109,7 +109,7 @@ fn parse_type(
     r#type
 }
 
-/// return (doc, default, nesting, require, skip)
+/// return (doc, default, nesting, require, skip, rename)
 fn parse_attrs(
     attrs: &[Attribute],
 ) -> (
@@ -118,12 +118,15 @@ fn parse_attrs(
     Option<NestingFormat>,
     bool,
     bool,
+    Option<String>,
 ) {
     let mut docs = Vec::new();
     let mut default_source = None;
     let mut nesting_format = None;
     let mut require = false;
     let mut skip = false;
+    let mut rename = None;
+
     for attr in attrs.iter() {
         match (attr.style, &attr.meta) {
             (Outer, NameValue(MetaNameValue { path, value, .. })) => {
@@ -166,6 +169,11 @@ fn parse_attrs(
                     if token_str == "skip_deserializing" || token_str == "skip" {
                         skip = true;
                     }
+                    if token_str.starts_with("rename") {
+                        if let Some((_, s)) = token_str.split_once('=') {
+                            rename = Some(s.trim().trim_matches('"').into());
+                        }
+                    }
                 }
             }
             (Outer, List(MetaList { path, tokens, .. }))
@@ -203,7 +211,7 @@ fn parse_attrs(
             _ => (),
         }
     }
-    (docs, default_source, nesting_format, require, skip)
+    (docs, default_source, nesting_format, require, skip, rename)
 }
 
 fn parse_field(
@@ -214,10 +222,12 @@ fn parse_field(
     bool,
     Option<NestingFormat>,
     bool,
+    Option<String>,
 ) {
     let mut default_value = String::new();
     let mut optional = false;
-    let (docs, default_source, mut nesting_format, require, skip) = parse_attrs(&field.attrs);
+    let (docs, default_source, mut nesting_format, require, skip, rename) =
+        parse_attrs(&field.attrs);
     let ty = parse_type(
         &field.ty,
         &mut default_value,
@@ -236,6 +246,7 @@ fn parse_field(
         optional && !require,
         nesting_format,
         skip,
+        rename,
     )
 }
 
@@ -278,10 +289,13 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
     if let Named(fields_named) = fields {
         for f in fields_named.named.iter() {
             let field_type = parse_type(&f.ty, &mut String::new(), &mut false, &mut None);
-            if let Some(field_name) = f.ident.as_ref().map(|i| i.to_string()) {
-                let (default, doc_str, optional, nesting_format, skip) = parse_field(f);
+            if let Some(mut field_name) = f.ident.as_ref().map(|i| i.to_string()) {
+                let (default, doc_str, optional, nesting_format, skip, rename) = parse_field(f);
                 if skip {
                     continue;
+                }
+                if let Some(rename) = rename {
+                    field_name = rename;
                 }
                 push_doc_string(&mut field_example, doc_str);
 
@@ -340,6 +354,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                     match default {
                         DefaultSource::DefaultValue(default) => {
                             field_example.push_str("\"#.to_string() + prefix + &r#\"");
+                            // TODO rename here
                             field_example.push_str(field_name.trim_start_matches("r#"));
                             field_example.push_str(" = ");
                             field_example.push_str(&default);
