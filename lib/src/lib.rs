@@ -809,4 +809,31 @@ type = 0
 "#
         );
     }
+
+    #[test]
+    fn non_nesting_field_should_be_first() {
+        #[derive(TomlExample)]
+        #[allow(dead_code)]
+        struct Foo {
+            a: String,
+        }
+
+        #[derive(TomlExample)]
+        #[allow(dead_code)]
+        struct Bar {
+            #[toml_example(nesting)]
+            foo: Foo,
+            b: String,
+        }
+
+        assert_eq!(
+            Bar::toml_example(),
+            r#"b = ""
+
+[foo]
+a = ""
+
+"#
+        );
+    }
 }
