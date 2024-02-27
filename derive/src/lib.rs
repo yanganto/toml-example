@@ -322,14 +322,13 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                 } else {
                     field_name = rename_rule.apply_to_field(&field_name);
                 }
-                push_doc_string(&mut field_example, doc_str);
-
                 if nesting_format
                     .as_ref()
                     .map(|f| matches!(f, NestingFormat::Section(_)))
                     .unwrap_or_default()
                 {
                     if let Some(field_type) = field_type {
+                        push_doc_string(&mut nesting_field_example, doc_str);
                         nesting_field_example.push_str("\"#.to_string()");
                         let key = default_key(default);
                         match nesting_format {
@@ -357,6 +356,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                         abort!(&f.ident, "nesting only work on inner structure")
                     }
                 } else if nesting_format == Some(NestingFormat::Prefix) {
+                    push_doc_string(&mut field_example, doc_str);
                     if let Some(field_type) = field_type {
                         field_example.push_str("\"#.to_string()");
                         if optional {
@@ -373,6 +373,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                         abort!(&f.ident, "nesting only work on inner structure")
                     }
                 } else {
+                    push_doc_string(&mut field_example, doc_str);
                     if optional {
                         field_example.push_str("# ");
                     }
