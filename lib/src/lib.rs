@@ -870,4 +870,40 @@ a = ""
 "#
         );
     }
+
+    #[test]
+    fn hashset_and_struct() {
+        use std::collections::HashMap;
+
+        #[derive(TomlExample)]
+        #[allow(dead_code)]
+        struct Foo {
+            a: String,
+        }
+
+        #[derive(TomlExample)]
+        #[allow(dead_code)]
+        struct Bar {
+            /// Default instances doc
+            #[toml_example(nesting)]
+            default: Foo,
+
+            /// Instances doc
+            #[toml_example(nesting)]
+            instance: HashMap<String, Foo>,
+        }
+
+        assert_eq!(
+            Bar::toml_example(),
+            r#"# Default instances doc
+[default]
+a = ""
+
+# Instances doc
+[instance.example]
+a = ""
+
+"#
+        );
+    }
 }
