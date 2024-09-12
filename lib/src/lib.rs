@@ -361,12 +361,12 @@ g = ["super looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong str
         #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
         #[allow(dead_code)]
         struct Outer {
-            /// Outer.inner is a complex sturct
+            /// Outer.inner is a complex struct
             inner: Inner,
         }
         assert_eq!(
             Outer::toml_example(),
-            r#"# Outer.inner is a complex sturct
+            r#"# Outer.inner is a complex struct
 inner = ""
 
 "#
@@ -385,13 +385,13 @@ inner = ""
         #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
         #[allow(dead_code)]
         struct Outer {
-            /// Outer.inner is a complex sturct
+            /// Outer.inner is a complex struct
             #[toml_example(nesting)]
             inner: Inner,
         }
         assert_eq!(
             Outer::toml_example(),
-            r#"# Outer.inner is a complex sturct
+            r#"# Outer.inner is a complex struct
 # Inner is a config live in Outer
 [inner]
 # Inner.a should be a number
@@ -417,13 +417,13 @@ a = 0
         #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
         #[allow(dead_code)]
         struct Outer {
-            /// Outer.inner is a complex sturct
+            /// Outer.inner is a complex struct
             #[toml_example(nesting = section)]
             inner: Inner,
         }
         assert_eq!(
             Outer::toml_example(),
-            r#"# Outer.inner is a complex sturct
+            r#"# Outer.inner is a complex struct
 # Inner is a config live in Outer
 [inner]
 # Inner.a should be a number
@@ -449,13 +449,13 @@ a = 0
         #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
         #[allow(dead_code)]
         struct Outer {
-            /// Outer.inner is a complex sturct
+            /// Outer.inner is a complex struct
             #[toml_example(nesting = prefix)]
             inner: Inner,
         }
         assert_eq!(
             Outer::toml_example(),
-            r#"# Outer.inner is a complex sturct
+            r#"# Outer.inner is a complex struct
 # Inner is a config live in Outer
 # Inner.a should be a number
 inner.a = 0
@@ -538,13 +538,13 @@ port = 0
         #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
         #[allow(dead_code)]
         struct Outer {
-            /// Outer.inner is a complex sturct
+            /// Outer.inner is a complex struct
             #[toml_example(nesting)]
             inner: Option<Inner>,
         }
         assert_eq!(
             Outer::toml_example(),
-            r#"# Outer.inner is a complex sturct
+            r#"# Outer.inner is a complex struct
 # Inner is a config live in Outer
 # [inner]
 # Inner.a should be a number
@@ -570,13 +570,13 @@ port = 0
         #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
         #[allow(dead_code)]
         struct Outer {
-            /// Outer.inner is a complex sturct
+            /// Outer.inner is a complex struct
             #[toml_example(nesting = section)]
             inner: Option<Inner>,
         }
         assert_eq!(
             Outer::toml_example(),
-            r#"# Outer.inner is a complex sturct
+            r#"# Outer.inner is a complex struct
 # Inner is a config live in Outer
 # [inner]
 # Inner.a should be a number
@@ -602,13 +602,13 @@ port = 0
         #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
         #[allow(dead_code)]
         struct Outer {
-            /// Outer.inner is a complex sturct
+            /// Outer.inner is a complex struct
             #[toml_example(nesting = prefix)]
             inner: Option<Inner>,
         }
         assert_eq!(
             Outer::toml_example(),
-            r#"# Outer.inner is a complex sturct
+            r#"# Outer.inner is a complex struct
 # Inner is a config live in Outer
 # Inner.a should be a number
 # inner.a = 0
