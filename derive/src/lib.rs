@@ -349,9 +349,9 @@ impl Intermediate{
         Ok(quote! {
             impl toml_example::TomlExample for #struct_name {
                 fn toml_example() -> String {
-                    #struct_name::toml_field_example("", "")
+                    #struct_name::toml_example_with_prefix("", "")
                 }
-                fn toml_field_example(label: &str, prefix: &str) -> String {
+                fn toml_example_with_prefix(label: &str, prefix: &str) -> String{
                     #struct_doc.to_string() + label + &#field_example_stream
                 }
             }
@@ -387,22 +387,22 @@ impl Intermediate{
                             let key = default_key(default);
                             match nesting_format {
                                 Some(NestingFormat::Section(NestingType::Vec)) if optional => nesting_field_example.push_str(&format!(
-                                    " + &{field_type}::toml_field_example(\"# [[{field_name:}]]\n\", \"# \")"
+                                    " + &{field_type}::toml_example_with_prefix(\"# [[{field_name:}]]\n\", \"# \")"
                                 )),
                                 Some(NestingFormat::Section(NestingType::Vec)) => nesting_field_example.push_str(&format!(
-                                    " + &{field_type}::toml_field_example(\"[[{field_name:}]]\n\", \"\")"
+                                    " + &{field_type}::toml_example_with_prefix(\"[[{field_name:}]]\n\", \"\")"
                                 )),
                                 Some(NestingFormat::Section(NestingType::Dict)) if optional => nesting_field_example.push_str(&format!(
-                                    " + &{field_type}::toml_field_example(\"# [{field_name:}.{key}]\n\", \"# \")"
+                                    " + &{field_type}::toml_example_with_prefix(\"# [{field_name:}.{key}]\n\", \"# \")"
                                 )),
                                 Some(NestingFormat::Section(NestingType::Dict)) => nesting_field_example.push_str(&format!(
-                                    " + &{field_type}::toml_field_example(\"[{field_name:}.{key}]\n\", \"\")"
+                                    " + &{field_type}::toml_example_with_prefix(\"[{field_name:}.{key}]\n\", \"\")"
                                 )),
                                 _ if optional => nesting_field_example.push_str(&format!(
-                                    " + &{field_type}::toml_field_example(\"# [{field_name:}]\n\", \"# \")"
+                                    " + &{field_type}::toml_example_with_prefix(\"# [{field_name:}]\n\", \"# \")"
                                 )),
                                 _ => nesting_field_example.push_str(&format!(
-                                    " + &{field_type}::toml_field_example(\"[{field_name:}]\n\", \"\")"
+                                    " + &{field_type}::toml_example_with_prefix(\"[{field_name:}]\n\", \"\")"
                                 ))
                             };
                             nesting_field_example.push_str(" + &r#\"");
@@ -415,11 +415,11 @@ impl Intermediate{
                             field_example.push_str("\"#.to_string()");
                             if optional {
                                 field_example.push_str(&format!(
-                                    " + &{field_type}::toml_field_example(\"\", \"# {field_name:}.\")"
+                                    " + &{field_type}::toml_example_with_prefix(\"\", \"# {field_name:}.\")"
                                 ));
                             } else {
                                 field_example.push_str(&format!(
-                                    " + &{field_type}::toml_field_example(\"\", \"{field_name:}.\")"
+                                    " + &{field_type}::toml_example_with_prefix(\"\", \"{field_name:}.\")"
                                 ));
                             }
                             field_example.push_str(" + &r#\"");
