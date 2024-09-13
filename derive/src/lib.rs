@@ -297,6 +297,7 @@ fn default_key(default: DefaultSource) -> String {
     }
     "example".into()
 }
+
 #[proc_macro_derive(TomlExample, attributes(toml_example))]
 #[proc_macro_error]
 pub fn derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
