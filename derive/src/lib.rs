@@ -24,6 +24,16 @@ struct Intermediate {
     field_example: String,
 }
 
+struct FieldMeta {
+    docs: Vec<String>,
+    default_source: Option<DefaultSource>,
+    nesting_format: Option<NestingFormat>,
+    require: bool,
+    skip: bool,
+    rename: Option<String>,
+    rename_rule: case::RenameRule,
+}
+
 #[derive(Debug)]
 enum DefaultSource {
     DefaultValue(String),
@@ -117,19 +127,9 @@ fn parse_type(
     r#type
 }
 
-#[allow(clippy::type_complexity)]
-/// return (doc, default, nesting, require, skip, rename, rename_rule)
 fn parse_attrs(
     attrs: &[Attribute],
-) -> (
-    Vec<String>,
-    Option<DefaultSource>,
-    Option<NestingFormat>,
-    bool,
-    bool,
-    Option<String>,
-    case::RenameRule,
-) {
+) -> FieldMeta {
     let mut docs = Vec::new();
     let mut default_source = None;
     let mut nesting_format = None;
@@ -232,7 +232,8 @@ fn parse_attrs(
             _ => (),
         }
     }
-    (
+
+    FieldMeta{
         docs,
         default_source,
         nesting_format,
@@ -240,7 +241,7 @@ fn parse_attrs(
         skip,
         rename,
         rename_rule,
-    )
+    }
 }
 
 fn parse_field(
@@ -255,7 +256,7 @@ fn parse_field(
 ) {
     let mut default_value = String::new();
     let mut optional = false;
-    let (docs, default_source, mut nesting_format, require, skip, rename, _) =
+    let FieldMeta {docs, default_source, mut nesting_format, require, skip, rename, ..} =
         parse_attrs(&field.attrs);
     let ty = parse_type(
         &field.ty,
@@ -315,12 +316,12 @@ impl Intermediate{
     ) -> Result<Intermediate> {
         let struct_name = ident.clone();
 
-        let (doc, _, _, _, _, _, rename_rule) = parse_attrs(&attrs);
+        let FieldMeta{ docs, rename_rule, .. } = parse_attrs(&attrs);
 
         let struct_doc = {
-            let mut struct_doc = String::new();
-            push_doc_string(&mut struct_doc, doc);
-            struct_doc
+            let mut doc = String::new();
+            push_doc_string(&mut doc, docs);
+            doc
         };
 
         let fields = if let syn::Data::Struct(syn::DataStruct { fields, .. }) = &data {
@@ -434,7 +435,6 @@ impl Intermediate{
                         match default {
                             DefaultSource::DefaultValue(default) => {
                                 field_example.push_str("\"#.to_string() + prefix + &r#\"");
-                                // TODO rename here
                                 field_example.push_str(field_name.trim_start_matches("r#"));
                                 field_example.push_str(" = ");
                                 field_example.push_str(&default);
