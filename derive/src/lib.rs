@@ -7,17 +7,14 @@ use quote::quote;
 use syn::{
     AngleBracketedGenericArguments,
     AttrStyle::Outer,
-    Attribute,
-    DeriveInput,
+    Attribute, DeriveInput,
     Expr::Lit,
-    ExprLit, Field,
-    Fields,
+    ExprLit, Field, Fields,
     Fields::Named,
     GenericArgument,
     Lit::Str,
     Meta::{List, NameValue},
-    MetaList, MetaNameValue, PathArguments, PathSegment, Type, TypePath,
-    Result,
+    MetaList, MetaNameValue, PathArguments, PathSegment, Result, Type, TypePath,
 };
 mod case;
 
@@ -313,13 +310,9 @@ pub fn derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
 impl Intermediate{
     pub fn from_ast(
         DeriveInput {
-            ident,
-            data,
-            attrs,
-            ..
+            ident, data, attrs, ..
         }: syn::DeriveInput,
     ) -> Result<Intermediate> {
-
         let struct_name = ident.clone();
 
         let (doc, _, _, _, _, _, rename_rule) = parse_attrs(&attrs);
@@ -351,8 +344,7 @@ impl Intermediate{
             field_example,
         } = self;
 
-        let field_example_stream: proc_macro2::TokenStream =
-            field_example.parse()?;
+        let field_example_stream: proc_macro2::TokenStream = field_example.parse()?;
 
         Ok(quote! {
             impl toml_example::TomlExample for #struct_name {
@@ -465,8 +457,9 @@ impl Intermediate{
                                 field_example.push_str("\"#.to_string() + prefix + &r#\"");
                                 field_example.push_str(&field_name);
                                 field_example.push_str(" = \"#.to_string()");
-                                field_example
-                                    .push_str(&format!(" + &format!(\"{{:?}}\",  {fn_str}())"));
+                                field_example.push_str(&format!(
+                                    " + &format!(\"{{:?}}\",  {fn_str}())"
+                                ));
                                 field_example.push_str("+ &r#\"\n");
                             }
                         }
@@ -480,5 +473,4 @@ impl Intermediate{
 
         field_example
     }
-
 }
