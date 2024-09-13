@@ -11,6 +11,7 @@ use syn::{
     DeriveInput,
     Expr::Lit,
     ExprLit, Field,
+    Fields,
     Fields::Named,
     GenericArgument,
     Lit::Str,
@@ -298,7 +299,6 @@ fn default_key(default: DefaultSource) -> String {
     }
     "example".into()
 }
-
 #[proc_macro_derive(TomlExample, attributes(toml_example))]
 #[proc_macro_error]
 pub fn derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -321,15 +321,14 @@ impl Intermediate{
     ) -> Result<Intermediate> {
 
         let struct_name = ident.clone();
-        let mut struct_doc = "r#\"".to_string();
-
-        // Nesting field example will be append after the non nesting field example to avoid #18
-        let mut field_example = "r#\"".to_string();
-        let mut nesting_field_example = "".to_string();
 
         let (doc, _, _, _, _, _, rename_rule) = parse_attrs(&attrs);
-        push_doc_string(&mut struct_doc, doc);
-        struct_doc.push_str("\"#.to_string()");
+
+        let struct_doc = {
+            let mut struct_doc = String::new();
+            push_doc_string(&mut struct_doc, doc);
+            struct_doc
+        };
 
         let fields = if let syn::Data::Struct(syn::DataStruct { fields, .. }) = &data {
             fields
@@ -337,8 +336,43 @@ impl Intermediate{
             abort!(ident, "TomlExample derive only use for struct")
         };
 
-        if let Named(fields_named) = fields {
-            for f in fields_named.named.iter() {
+        let field_example = Self::parse_field_examples(fields, rename_rule);
+
+        Ok(Intermediate {
+            struct_name,
+            struct_doc,
+            field_example,
+        })
+    }
+    pub fn to_token_stream(&self) -> Result<TokenStream> {
+        let Intermediate {
+            struct_name,
+            struct_doc,
+            field_example,
+        } = self;
+
+        let field_example_stream: proc_macro2::TokenStream =
+            field_example.parse()?;
+
+        Ok(quote! {
+            impl toml_example::TomlExample for #struct_name {
+                fn toml_example() -> String {
+                    #struct_name::toml_field_example("", "")
+                }
+                fn toml_field_example(label: &str, prefix: &str) -> String {
+                    #struct_doc.to_string() + label + &#field_example_stream
+                }
+            }
+        })
+    }
+
+    fn parse_field_examples(fields: &Fields, rename_rule: case::RenameRule) -> String {
+        // Always put nesting field example in the last to avoid #18
+        let mut field_example = "r#\"".to_string();
+        let mut nesting_field_example = "".to_string();
+
+        if let Named(named_fields) = fields {
+            for f in named_fields.named.iter() {
                 let field_type = parse_type(&f.ty, &mut String::new(), &mut false, &mut None);
                 if let Some(mut field_name) = f.ident.as_ref().map(|i| i.to_string()) {
                     let (default, doc_str, optional, nesting_format, skip, rename) = parse_field(f);
@@ -444,32 +478,7 @@ impl Intermediate{
         field_example += &nesting_field_example;
         field_example.push_str("\"#.to_string()");
 
-        Ok(Intermediate {
-            struct_name,
-            struct_doc,
-            field_example,
-        })
+        field_example
     }
-    pub fn to_token_stream(&self) -> Result<TokenStream> {
-        let Intermediate {
-            struct_name,
-            struct_doc,
-            field_example,
-        } = self;
-        let struct_doc_stream: proc_macro2::TokenStream =
-            struct_doc.parse()?;
-        let field_example_stream: proc_macro2::TokenStream =
-            field_example.parse()?;
 
-        Ok(quote! {
-            impl toml_example::TomlExample for #struct_name {
-                fn toml_example() -> String {
-                    #struct_name::toml_field_example("", "")
-                }
-                fn toml_field_example(label: &str, prefix: &str) -> String {
-                    #struct_doc_stream + label + &#field_example_stream
-                }
-            }
-        })
-    }
 }
