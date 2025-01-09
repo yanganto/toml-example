@@ -327,10 +327,13 @@ d = ""
                "third",
             ])]
             g: Vec<String>,
+            /// Config.color should be a hex color code
+            #[toml_example(default = "#FAFAFA")]
+            color: String,
         }
         assert_eq!(
             Config::toml_example(),
-            r#"# Config.a should be a number
+            r##"# Config.a should be a number
 a = 7
 
 # Config.b should be a string
@@ -345,7 +348,10 @@ f = "super looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong stri
 g = ["super looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong string",
 "second", "third",]
 
-"#
+# Config.color should be a hex color code
+color = "#FAFAFA"
+
+"##
         );
     }
 
