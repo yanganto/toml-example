@@ -15,7 +15,6 @@
           inherit system overlays;
         };
         rust = pkgs.rust-bin.stable.latest.default;
-        dr = dependency-refresh.defaultPackage.${system};
 
         publishScript = pkgs.writeShellScriptBin "crate-publish" ''
           cargo login $1
@@ -23,23 +22,13 @@
           sleep 10
           cargo publish -p toml-example
         '';
-        updateDependencyScript = pkgs.writeShellScriptBin "update-dependency" ''
-          dr ./Cargo.toml
-          if [ -f "Cargo.toml.old" ]; then
-            rm Cargo.toml.old
-            exit 1
-          fi
-        '';
       in
       with pkgs;
       {
         devShell = mkShell {
           buildInputs = [
             rust
-
-            dr
             publishScript
-            updateDependencyScript
           ];
         };
       }
