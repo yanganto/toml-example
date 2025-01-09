@@ -362,7 +362,7 @@ impl Intermediate{
 
     fn parse_field_examples(fields: &Fields, rename_rule: case::RenameRule) -> String {
         // Always put nesting field example in the last to avoid #18
-        let mut field_example = "r#\"".to_string();
+        let mut field_example = "r##\"".to_string();
         let mut nesting_field_example = "".to_string();
 
         if let Named(named_fields) = fields {
@@ -385,7 +385,7 @@ impl Intermediate{
                     {
                         if let Some(field_type) = field_type {
                             push_doc_string(&mut nesting_field_example, doc_str);
-                            nesting_field_example.push_str("\"#.to_string()");
+                            nesting_field_example.push_str("\"##.to_string()");
                             let key = default_key(default);
                             match nesting_format {
                                 Some(NestingFormat::Section(NestingType::Vec)) if optional => nesting_field_example.push_str(&format!(
@@ -407,14 +407,14 @@ impl Intermediate{
                                     " + &{field_type}::toml_example_with_prefix(\"[{field_name:}]\n\", \"\")"
                                 ))
                             };
-                            nesting_field_example.push_str(" + &r#\"");
+                            nesting_field_example.push_str(" + &r##\"");
                         } else {
                             abort!(&f.ident, "nesting only work on inner structure")
                         }
                     } else if nesting_format == Some(NestingFormat::Prefix) {
                         push_doc_string(&mut field_example, doc_str);
                         if let Some(field_type) = field_type {
-                            field_example.push_str("\"#.to_string()");
+                            field_example.push_str("\"##.to_string()");
                             if optional {
                                 field_example.push_str(&format!(
                                     " + &{field_type}::toml_example_with_prefix(\"\", \"# {field_name:}.\")"
@@ -424,7 +424,7 @@ impl Intermediate{
                                     " + &{field_type}::toml_example_with_prefix(\"\", \"{field_name:}.\")"
                                 ));
                             }
-                            field_example.push_str(" + &r#\"");
+                            field_example.push_str(" + &r##\"");
                         } else {
                             abort!(&f.ident, "nesting only work on inner structure")
                         }
@@ -435,33 +435,33 @@ impl Intermediate{
                         }
                         match default {
                             DefaultSource::DefaultValue(default) => {
-                                field_example.push_str("\"#.to_string() + prefix + &r#\"");
+                                field_example.push_str("\"##.to_string() + prefix + &r##\"");
                                 field_example.push_str(field_name.trim_start_matches("r#"));
                                 field_example.push_str(" = ");
                                 field_example.push_str(&default);
                                 field_example.push('\n');
                             }
                             DefaultSource::DefaultFn(None) => {
-                                field_example.push_str("\"#.to_string() + prefix + &r#\"");
+                                field_example.push_str("\"##.to_string() + prefix + &r##\"");
                                 field_example.push_str(&field_name);
                                 field_example.push_str(" = \"\"\n");
                             }
                             DefaultSource::DefaultFn(Some(ty)) => {
-                                field_example.push_str("\"#.to_string() + prefix + &r#\"");
+                                field_example.push_str("\"##.to_string() + prefix + &r##\"");
                                 field_example.push_str(&field_name);
-                                field_example.push_str(" = \"#.to_string()");
+                                field_example.push_str(" = \"##.to_string()");
                                 field_example
                                     .push_str(&format!(" + &format!(\"{{:?}}\",  {ty}::default())"));
-                                field_example.push_str(" + &r#\"\n");
+                                field_example.push_str(" + &r##\"\n");
                             }
                             DefaultSource::SerdeDefaultFn(fn_str) => {
-                                field_example.push_str("\"#.to_string() + prefix + &r#\"");
+                                field_example.push_str("\"##.to_string() + prefix + &r##\"");
                                 field_example.push_str(&field_name);
-                                field_example.push_str(" = \"#.to_string()");
+                                field_example.push_str(" = \"##.to_string()");
                                 field_example.push_str(&format!(
                                     " + &format!(\"{{:?}}\",  {fn_str}())"
                                 ));
-                                field_example.push_str("+ &r#\"\n");
+                                field_example.push_str("+ &r##\"\n");
                             }
                         }
                         field_example.push('\n');
@@ -470,7 +470,7 @@ impl Intermediate{
             }
         }
         field_example += &nesting_field_example;
-        field_example.push_str("\"#.to_string()");
+        field_example.push_str("\"##.to_string()");
 
         field_example
     }
