@@ -24,7 +24,7 @@ struct Intermediate {
     field_example: String,
 }
 
-struct FieldMeta {
+struct AttrMeta {
     docs: Vec<String>,
     default_source: Option<DefaultSource>,
     nesting_format: Option<NestingFormat>,
@@ -138,7 +138,7 @@ fn parse_type(
 
 fn parse_attrs(
     attrs: &[Attribute],
-) -> FieldMeta {
+) -> AttrMeta {
     let mut docs = Vec::new();
     let mut default_source = None;
     let mut nesting_format = None;
@@ -242,7 +242,7 @@ fn parse_attrs(
         }
     }
 
-    FieldMeta{
+    AttrMeta{
         docs,
         default_source,
         nesting_format,
@@ -258,7 +258,7 @@ fn parse_field(
 ) -> ParsedField {
     let mut default_value = String::new();
     let mut optional = false;
-    let FieldMeta {docs, default_source, mut nesting_format, skip, rename, require, .. } =
+    let AttrMeta {docs, default_source, mut nesting_format, skip, rename, require, .. } =
         parse_attrs(&field.attrs);
     let ty = parse_type(
         &field.ty,
@@ -319,7 +319,7 @@ impl Intermediate {
     ) -> Result<Intermediate> {
         let struct_name = ident.clone();
 
-        let FieldMeta{ docs, rename_rule, .. } = parse_attrs(&attrs);
+        let AttrMeta { docs, rename_rule, .. } = parse_attrs(&attrs);
 
         let struct_doc = {
             let mut doc = String::new();
