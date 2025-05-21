@@ -370,17 +370,15 @@ impl Intermediate {
 
         if let Named(named_fields) = fields {
             for f in named_fields.named.iter() {
+                let field = parse_field(f);
+                if field.skip {
+                    continue;
+                }
+
                 let field_type = parse_type(&f.ty, &mut String::new(), &mut false, &mut None);
                 if let Some(mut field_name) = f.ident.as_ref().map(|i| i.to_string()) {
-                    let field = parse_field(f);
-                    if field.skip {
-                        continue;
-                    }
-                    if let Some(name) = field.rename {
-                        field_name = name;
-                    } else {
-                        field_name = rename_rule.apply_to_field(&field_name);
-                    }
+                    field_name = field.rename.unwrap_or(rename_rule.apply_to_field(&field_name));
+
                     if field.nesting_format
                         .as_ref()
                         .map(|f| matches!(f, NestingFormat::Section(_)))
