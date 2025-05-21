@@ -41,6 +41,7 @@ struct ParsedField {
     skip: bool,
     rename: Option<String>,
     optional: bool,
+    ty: Option<String>,
 }
 
 #[derive(Debug)]
@@ -267,7 +268,7 @@ fn parse_field(
         &mut nesting_format,
     );
     let default = match default_source {
-        Some(DefaultSource::DefaultFn(_)) => DefaultSource::DefaultFn(ty),
+        Some(DefaultSource::DefaultFn(_)) => DefaultSource::DefaultFn(ty.clone()),
         Some(DefaultSource::SerdeDefaultFn(f)) => DefaultSource::SerdeDefaultFn(f),
         Some(DefaultSource::DefaultValue(v)) => DefaultSource::DefaultValue(v),
         _ => DefaultSource::DefaultValue(default_value),
@@ -279,6 +280,7 @@ fn parse_field(
         skip,
         rename,
         optional:  optional && !require,
+        ty,
     }
 }
 
@@ -374,8 +376,6 @@ impl Intermediate {
                 if field.skip {
                     continue;
                 }
-
-                let field_type = parse_type(&f.ty, &mut String::new(), &mut false, &mut None);
                 if let Some(mut field_name) = f.ident.as_ref().map(|i| i.to_string()) {
                     field_name = field.rename.unwrap_or(rename_rule.apply_to_field(&field_name));
 
@@ -384,7 +384,7 @@ impl Intermediate {
                         .map(|f| matches!(f, NestingFormat::Section(_)))
                         .unwrap_or_default()
                     {
-                        if let Some(field_type) = field_type {
+                        if let Some(field_type) = field.ty {
                             push_doc_string(&mut nesting_field_example, field.docs);
                             nesting_field_example.push_str("\"##.to_string()");
                             let key = default_key(field.default);
@@ -414,7 +414,7 @@ impl Intermediate {
                         }
                     } else if field.nesting_format == Some(NestingFormat::Prefix) {
                         push_doc_string(&mut field_example, field.docs);
-                        if let Some(field_type) = field_type {
+                        if let Some(field_type) = field.ty {
                             field_example.push_str("\"##.to_string()");
                             if field.optional {
                                 field_example.push_str(&format!(
