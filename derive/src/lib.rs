@@ -1,7 +1,7 @@
 extern crate proc_macro;
 
-use proc_macro2::TokenStream;
 use proc_macro2::Ident;
+use proc_macro2::TokenStream;
 use proc_macro_error2::{abort, proc_macro_error};
 use quote::quote;
 use syn::{
@@ -50,7 +50,7 @@ impl ParsedField {
     }
 
     // Provide a default key for map-like example
-    fn key(&self) -> String {
+    fn default_key(&self) -> String {
         if let DefaultSource::DefaultValue(v) = &self.default {
             let key = v.trim_matches('\"').replace(' ', "").replace('.', "-");
             if !key.is_empty() {
@@ -58,6 +58,32 @@ impl ParsedField {
             }
         }
         "example".into()
+    }
+
+    fn label(&self) -> String {
+        match self.nesting_format {
+            Some(NestingFormat::Section(NestingType::Vec)) => {
+                self.prefix() + &format!("[[{}]]", self.name)
+            }
+            Some(NestingFormat::Section(NestingType::Dict)) => {
+                self.prefix() + &format!("[{}.{}]", self.name, self.default_key())
+            }
+            Some(NestingFormat::Prefix) => "".to_string(),
+            _ => self.prefix() + &format!("[{}]", self.name),
+        }
+    }
+
+    fn prefix(&self) -> String {
+        let opt_prefix = if self.optional {
+            "# ".to_string()
+        } else {
+            String::new()
+        };
+        if self.nesting_format == Some(NestingFormat::Prefix) {
+            format!("{}{}.", opt_prefix, self.name)
+        } else {
+            opt_prefix
+        }
     }
 }
 
@@ -154,9 +180,7 @@ fn parse_type(
     r#type
 }
 
-fn parse_attrs(
-    attrs: &[Attribute],
-) -> AttrMeta {
+fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
     let mut docs = Vec::new();
     let mut default_source = None;
     let mut nesting_format = None;
@@ -260,7 +284,7 @@ fn parse_attrs(
         }
     }
 
-    AttrMeta{
+    AttrMeta {
         docs,
         default_source,
         nesting_format,
@@ -271,14 +295,18 @@ fn parse_attrs(
     }
 }
 
-fn parse_field(
-    field: &Field,
-    rename_rule: case::RenameRule
-) -> ParsedField {
+fn parse_field(field: &Field, rename_rule: case::RenameRule) -> ParsedField {
     let mut default_value = String::new();
     let mut optional = false;
-    let AttrMeta {docs, default_source, mut nesting_format, skip, rename, require, .. } =
-        parse_attrs(&field.attrs);
+    let AttrMeta {
+        docs,
+        default_source,
+        mut nesting_format,
+        skip,
+        rename,
+        require,
+        ..
+    } = parse_attrs(&field.attrs);
     let ty = parse_type(
         &field.ty,
         &mut default_value,
@@ -302,7 +330,7 @@ fn parse_field(
         nesting_format,
         skip,
         name,
-        optional:  optional && !require,
+        optional: optional && !require,
         ty,
     }
 }
@@ -334,7 +362,9 @@ impl Intermediate {
     ) -> Result<Intermediate> {
         let struct_name = ident.clone();
 
-        let AttrMeta { docs, rename_rule, .. } = parse_attrs(&attrs);
+        let AttrMeta {
+            docs, rename_rule, ..
+        } = parse_attrs(&attrs);
 
         let struct_doc = {
             let mut doc = String::new();
@@ -389,7 +419,8 @@ impl Intermediate {
                 if field.skip {
                     continue;
                 }
-                if field.nesting_format
+                if field
+                    .nesting_format
                     .as_ref()
                     .map(|f| matches!(f, NestingFormat::Section(_)))
                     .unwrap_or_default()
@@ -397,46 +428,24 @@ impl Intermediate {
                     if let Some(ref field_type) = field.ty {
                         field.push_doc_to_string(&mut nesting_field_example);
                         nesting_field_example.push_str("\"##.to_string()");
-                        match field.nesting_format {
-                            Some(NestingFormat::Section(NestingType::Vec)) if field.optional => nesting_field_example.push_str(&format!(
-                                " + &{field_type}::toml_example_with_prefix(\"# [[{}]]\n\", \"# \")", field.name
-                            )),
-                            Some(NestingFormat::Section(NestingType::Vec)) => nesting_field_example.push_str(&format!(
-                                " + &{field_type}::toml_example_with_prefix(\"[[{}]]\n\", \"\")", field.name
-                            )),
-                            Some(NestingFormat::Section(NestingType::Dict)) if field.optional => nesting_field_example.push_str(&format!(
-                                " + &{field_type}::toml_example_with_prefix(\"# [{}.{}]\n\", \"# \")", field.name, field.key()
-                            )),
-                            Some(NestingFormat::Section(NestingType::Dict)) => nesting_field_example.push_str(&format!(
-                                " + &{field_type}::toml_example_with_prefix(\"[{}.{}]\n\", \"\")", field.name, field.key()
-                            )),
-                            _ if field.optional => nesting_field_example.push_str(&format!(
-                                " + &{field_type}::toml_example_with_prefix(\"# [{}]\n\", \"# \")", field.name
-                            )),
-                            _ => nesting_field_example.push_str(&format!(
-                                " + &{field_type}::toml_example_with_prefix(\"[{}]\n\", \"\")", field.name
-                            ))
-                        };
+                        nesting_field_example.push_str(&format!(
+                            " + &{field_type}::toml_example_with_prefix(\"{}\n\", \"{}\")",
+                            field.label(),
+                            field.prefix()
+                        ));
                         nesting_field_example.push_str(" + &r##\"");
-
                     } else {
                         abort!(&f.ident, "nesting only work on inner structure")
                     }
                 } else if field.nesting_format == Some(NestingFormat::Prefix) {
                     field.push_doc_to_string(&mut field_example);
-                    if let Some(field_type) = field.ty {
+                    if let Some(ref field_type) = field.ty {
                         field_example.push_str("\"##.to_string()");
-                        if field.optional {
-                            field_example.push_str(&format!(
-                                " + &{field_type}::toml_example_with_prefix(\"\", \"# {}.\")",
-                                field.name
-                            ));
-                        } else {
-                            field_example.push_str(&format!(
-                                " + &{field_type}::toml_example_with_prefix(\"\", \"{}.\")",
-                                field.name
-                            ));
-                        }
+                        field_example.push_str(&format!(
+                            " + &{field_type}::toml_example_with_prefix(\"{}\", \"{}\")",
+                            field.label(),
+                            field.prefix()
+                        ));
                         field_example.push_str(" + &r##\"");
                     } else {
                         abort!(&f.ident, "nesting only work on inner structure")
@@ -472,9 +481,8 @@ impl Intermediate {
                             field_example.push_str("\"##.to_string() + prefix + &r##\"");
                             field_example.push_str(&field.name);
                             field_example.push_str(" = \"##.to_string()");
-                            field_example.push_str(&format!(
-                                " + &format!(\"{{:?}}\",  {fn_str}())"
-                            ));
+                            field_example
+                                .push_str(&format!(" + &format!(\"{{:?}}\",  {fn_str}())"));
                             field_example.push_str("+ &r##\"\n");
                         }
                     }
