@@ -419,34 +419,25 @@ impl Intermediate {
                 if field.skip {
                     continue;
                 }
-                if field
-                    .nesting_format
-                    .as_ref()
-                    .map(|f| matches!(f, NestingFormat::Section(_)))
-                    .unwrap_or_default()
-                {
+                if field.nesting_format.is_some() {
+                    let (example, nesting_section_newline) =
+                        if field.nesting_format == Some(NestingFormat::Prefix) {
+                            (&mut field_example, "")
+                        } else {
+                            // Nesting in section will attached to the buttom
+                            (&mut nesting_field_example, "\n")
+                        };
+
+                    field.push_doc_to_string(example);
                     if let Some(ref field_type) = field.ty {
-                        field.push_doc_to_string(&mut nesting_field_example);
-                        nesting_field_example.push_str("\"##.to_string()");
-                        nesting_field_example.push_str(&format!(
-                            " + &{field_type}::toml_example_with_prefix(\"{}\n\", \"{}\")",
+                        example.push_str("\"##.to_string()");
+                        example.push_str(&format!(
+                            " + &{field_type}::toml_example_with_prefix(\"{}{}\", \"{}\")",
                             field.label(),
+                            nesting_section_newline,
                             field.prefix()
                         ));
-                        nesting_field_example.push_str(" + &r##\"");
-                    } else {
-                        abort!(&f.ident, "nesting only work on inner structure")
-                    }
-                } else if field.nesting_format == Some(NestingFormat::Prefix) {
-                    field.push_doc_to_string(&mut field_example);
-                    if let Some(ref field_type) = field.ty {
-                        field_example.push_str("\"##.to_string()");
-                        field_example.push_str(&format!(
-                            " + &{field_type}::toml_example_with_prefix(\"{}\", \"{}\")",
-                            field.label(),
-                            field.prefix()
-                        ));
-                        field_example.push_str(" + &r##\"");
+                        example.push_str(" + &r##\"");
                     } else {
                         abort!(&f.ident, "nesting only work on inner structure")
                     }
