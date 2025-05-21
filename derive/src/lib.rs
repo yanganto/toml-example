@@ -34,6 +34,15 @@ struct FieldMeta {
     rename_rule: case::RenameRule,
 }
 
+struct ParsedField {
+    docs: Vec<String>,
+    default: DefaultSource,
+    nesting_format: Option<NestingFormat>,
+    skip: bool,
+    rename: Option<String>,
+    optional: bool,
+}
+
 #[derive(Debug)]
 enum DefaultSource {
     DefaultValue(String),
@@ -65,7 +74,7 @@ fn default_value(ty: String) -> String {
     .to_string()
 }
 
-/// return type without Option, Vec
+/// return type and unwrap with Option and Vec; or return the value type of HashMap and BTreeMap
 fn parse_type(
     ty: &Type,
     default: &mut String,
@@ -246,17 +255,10 @@ fn parse_attrs(
 
 fn parse_field(
     field: &Field,
-) -> (
-    DefaultSource,
-    Vec<String>,
-    bool,
-    Option<NestingFormat>,
-    bool,
-    Option<String>,
-) {
+) -> ParsedField {
     let mut default_value = String::new();
     let mut optional = false;
-    let FieldMeta {docs, default_source, mut nesting_format, require, skip, rename, ..} =
+    let FieldMeta {docs, default_source, mut nesting_format, skip, rename, require, .. } =
         parse_attrs(&field.attrs);
     let ty = parse_type(
         &field.ty,
@@ -264,20 +266,20 @@ fn parse_field(
         &mut optional,
         &mut nesting_format,
     );
-    let default_source = match default_source {
+    let default = match default_source {
         Some(DefaultSource::DefaultFn(_)) => DefaultSource::DefaultFn(ty),
         Some(DefaultSource::SerdeDefaultFn(f)) => DefaultSource::SerdeDefaultFn(f),
         Some(DefaultSource::DefaultValue(v)) => DefaultSource::DefaultValue(v),
         _ => DefaultSource::DefaultValue(default_value),
     };
-    (
-        default_source,
+    ParsedField {
         docs,
-        optional && !require,
+        default,
         nesting_format,
         skip,
         rename,
-    )
+        optional:  optional && !require,
+    }
 }
 
 fn push_doc_string(example: &mut String, docs: Vec<String>) {
@@ -309,7 +311,7 @@ pub fn derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
 }
 
 // Transient intermediate for structure parsing
-impl Intermediate{
+impl Intermediate {
     pub fn from_ast(
         DeriveInput {
             ident, data, attrs, ..
@@ -339,6 +341,7 @@ impl Intermediate{
             field_example,
         })
     }
+
     pub fn to_token_stream(&self) -> Result<TokenStream> {
         let Intermediate {
             struct_name,
@@ -369,38 +372,38 @@ impl Intermediate{
             for f in named_fields.named.iter() {
                 let field_type = parse_type(&f.ty, &mut String::new(), &mut false, &mut None);
                 if let Some(mut field_name) = f.ident.as_ref().map(|i| i.to_string()) {
-                    let (default, doc_str, optional, nesting_format, skip, rename) = parse_field(f);
-                    if skip {
+                    let field = parse_field(f);
+                    if field.skip {
                         continue;
                     }
-                    if let Some(rename) = rename {
-                        field_name = rename;
+                    if let Some(name) = field.rename {
+                        field_name = name;
                     } else {
                         field_name = rename_rule.apply_to_field(&field_name);
                     }
-                    if nesting_format
+                    if field.nesting_format
                         .as_ref()
                         .map(|f| matches!(f, NestingFormat::Section(_)))
                         .unwrap_or_default()
                     {
                         if let Some(field_type) = field_type {
-                            push_doc_string(&mut nesting_field_example, doc_str);
+                            push_doc_string(&mut nesting_field_example, field.docs);
                             nesting_field_example.push_str("\"##.to_string()");
-                            let key = default_key(default);
-                            match nesting_format {
-                                Some(NestingFormat::Section(NestingType::Vec)) if optional => nesting_field_example.push_str(&format!(
+                            let key = default_key(field.default);
+                            match field.nesting_format {
+                                Some(NestingFormat::Section(NestingType::Vec)) if field.optional => nesting_field_example.push_str(&format!(
                                     " + &{field_type}::toml_example_with_prefix(\"# [[{field_name:}]]\n\", \"# \")"
                                 )),
                                 Some(NestingFormat::Section(NestingType::Vec)) => nesting_field_example.push_str(&format!(
                                     " + &{field_type}::toml_example_with_prefix(\"[[{field_name:}]]\n\", \"\")"
                                 )),
-                                Some(NestingFormat::Section(NestingType::Dict)) if optional => nesting_field_example.push_str(&format!(
+                                Some(NestingFormat::Section(NestingType::Dict)) if field.optional => nesting_field_example.push_str(&format!(
                                     " + &{field_type}::toml_example_with_prefix(\"# [{field_name:}.{key}]\n\", \"# \")"
                                 )),
                                 Some(NestingFormat::Section(NestingType::Dict)) => nesting_field_example.push_str(&format!(
                                     " + &{field_type}::toml_example_with_prefix(\"[{field_name:}.{key}]\n\", \"\")"
                                 )),
-                                _ if optional => nesting_field_example.push_str(&format!(
+                                _ if field.optional => nesting_field_example.push_str(&format!(
                                     " + &{field_type}::toml_example_with_prefix(\"# [{field_name:}]\n\", \"# \")"
                                 )),
                                 _ => nesting_field_example.push_str(&format!(
@@ -411,11 +414,11 @@ impl Intermediate{
                         } else {
                             abort!(&f.ident, "nesting only work on inner structure")
                         }
-                    } else if nesting_format == Some(NestingFormat::Prefix) {
-                        push_doc_string(&mut field_example, doc_str);
+                    } else if field.nesting_format == Some(NestingFormat::Prefix) {
+                        push_doc_string(&mut field_example, field.docs);
                         if let Some(field_type) = field_type {
                             field_example.push_str("\"##.to_string()");
-                            if optional {
+                            if field.optional {
                                 field_example.push_str(&format!(
                                     " + &{field_type}::toml_example_with_prefix(\"\", \"# {field_name:}.\")"
                                 ));
@@ -429,11 +432,11 @@ impl Intermediate{
                             abort!(&f.ident, "nesting only work on inner structure")
                         }
                     } else {
-                        push_doc_string(&mut field_example, doc_str);
-                        if optional {
+                        push_doc_string(&mut field_example, field.docs);
+                        if field.optional {
                             field_example.push_str("# ");
                         }
-                        match default {
+                        match field.default {
                             DefaultSource::DefaultValue(default) => {
                                 field_example.push_str("\"##.to_string() + prefix + &r##\"");
                                 field_example.push_str(field_name.trim_start_matches("r#"));
