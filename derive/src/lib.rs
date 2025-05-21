@@ -409,7 +409,6 @@ impl Intermediate {
     }
 
     fn parse_field_examples(fields: &Fields, rename_rule: case::RenameRule) -> String {
-        // Always put nesting field example in the last to avoid #18
         let mut field_example = "r##\"".to_string();
         let mut nesting_field_example = "".to_string();
 
@@ -419,12 +418,15 @@ impl Intermediate {
                 if field.skip {
                     continue;
                 }
+
                 if field.nesting_format.is_some() {
+                    // Recursively add the toml_example_with_prefix of fields
+                    // If nesting in a section way will attached to the bottom to avoid #18
+                    // else the nesting will just using a prefix ahead the every field of example
                     let (example, nesting_section_newline) =
                         if field.nesting_format == Some(NestingFormat::Prefix) {
                             (&mut field_example, "")
                         } else {
-                            // Nesting in section will attached to the buttom
                             (&mut nesting_field_example, "\n")
                         };
 
@@ -442,35 +444,29 @@ impl Intermediate {
                         abort!(&f.ident, "nesting only work on inner structure")
                     }
                 } else {
+                    // The leaf field, writing down the example value based on different default source
                     field.push_doc_to_string(&mut field_example);
-
                     if field.optional {
                         field_example.push_str("# ");
                     }
+                    field_example.push_str("\"##.to_string() + prefix + &r##\"");
+                    field_example.push_str(field.name.trim_start_matches("r#"));
                     match field.default {
                         DefaultSource::DefaultValue(default) => {
-                            field_example.push_str("\"##.to_string() + prefix + &r##\"");
-                            field_example.push_str(field.name.trim_start_matches("r#"));
                             field_example.push_str(" = ");
                             field_example.push_str(&default);
                             field_example.push('\n');
                         }
                         DefaultSource::DefaultFn(None) => {
-                            field_example.push_str("\"##.to_string() + prefix + &r##\"");
-                            field_example.push_str(&field.name);
                             field_example.push_str(" = \"\"\n");
                         }
                         DefaultSource::DefaultFn(Some(ty)) => {
-                            field_example.push_str("\"##.to_string() + prefix + &r##\"");
-                            field_example.push_str(&field.name);
                             field_example.push_str(" = \"##.to_string()");
                             field_example
                                 .push_str(&format!(" + &format!(\"{{:?}}\",  {ty}::default())"));
                             field_example.push_str(" + &r##\"\n");
                         }
                         DefaultSource::SerdeDefaultFn(fn_str) => {
-                            field_example.push_str("\"##.to_string() + prefix + &r##\"");
-                            field_example.push_str(&field.name);
                             field_example.push_str(" = \"##.to_string()");
                             field_example
                                 .push_str(&format!(" + &format!(\"{{:?}}\",  {fn_str}())"));
