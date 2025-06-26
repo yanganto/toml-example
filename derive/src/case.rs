@@ -1,5 +1,5 @@
 //! This file is based on MIT license from serde project
-//! https://github.com/serde-rs/serde
+//! <https://github.com/serde-rs/serde>
 //!
 //! Code to convert the Rust-styled field/variant (e.g. `my_field`, `MyType`) to the
 //! case of the source (e.g. `my-field`, `MY_FIELD`).
