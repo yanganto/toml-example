@@ -839,7 +839,7 @@ a = 0
         #[allow(dead_code)]
         struct Config {
             /// Config.ab is an enum
-            #[toml_example(is_enum)]
+            #[toml_example(enum)]
             #[toml_example(default)]
             ab: AB,
             /// Config.ab2 is an enum too
