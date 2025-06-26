@@ -279,7 +279,7 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
                     require = true;
                 } else if token_str == "skip" {
                     skip = true;
-                } else if token_str == "is_enum" {
+                } else if token_str == "is_enum" || token_str == "enum" {
                     is_enum = true;
                 } else {
                     abort!(&attr, format!("{} is not allowed attribute", token_str))
