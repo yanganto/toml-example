@@ -800,6 +800,48 @@ a = 0
     }
 
     #[test]
+    fn is_enum() {
+        fn b() -> AB {
+            AB::B
+        }
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Config {
+            /// Config.ab is an enum
+            #[toml_example(is_enum)]
+            #[toml_example(default)]
+            ab: AB,
+            /// Config.ab2 is an enum too
+            #[toml_example(is_enum)]
+            #[serde(default)]
+            ab2: AB,
+            /// Config.ab3 is an enum as well
+            #[toml_example(is_enum)]
+            #[serde(default = "b")]
+            ab3: AB,
+        }
+        #[derive(Debug, Default, Deserialize, PartialEq)]
+        enum AB {
+            #[default]
+            A,
+            B,
+        }
+        assert_eq!(
+            Config::toml_example(),
+            r#"# Config.ab is an enum
+ab = "A"
+
+# Config.ab2 is an enum too
+ab2 = "A"
+
+# Config.ab3 is an enum as well
+ab3 = "B"
+
+"#
+        );
+    }
+
+    #[test]
     fn r_sharp_field() {
         #[derive(TomlExample)]
         #[allow(dead_code)]
