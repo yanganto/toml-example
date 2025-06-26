@@ -30,6 +30,7 @@ struct AttrMeta {
     nesting_format: Option<NestingFormat>,
     require: bool,
     skip: bool,
+    is_enum: bool,
     rename: Option<String>,
     rename_rule: case::RenameRule,
 }
@@ -39,6 +40,7 @@ struct ParsedField {
     default: DefaultSource,
     nesting_format: Option<NestingFormat>,
     skip: bool,
+    is_enum: bool,
     name: String,
     optional: bool,
     ty: Option<String>,
@@ -186,6 +188,7 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
     let mut nesting_format = None;
     let mut require = false;
     let mut skip = false;
+    let mut is_enum = false;
     let mut rename = None;
     let mut rename_rule = case::RenameRule::None;
 
@@ -276,6 +279,8 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
                     require = true;
                 } else if token_str == "skip" {
                     skip = true;
+                } else if token_str == "is_enum" {
+                    is_enum = true;
                 } else {
                     abort!(&attr, format!("{} is not allowed attribute", token_str))
                 }
@@ -290,6 +295,7 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
         nesting_format,
         require,
         skip,
+        is_enum,
         rename,
         rename_rule,
     }
@@ -303,6 +309,7 @@ fn parse_field(field: &Field, rename_rule: case::RenameRule) -> ParsedField {
         default_source,
         mut nesting_format,
         skip,
+        is_enum,
         rename,
         require,
         ..
@@ -329,6 +336,7 @@ fn parse_field(field: &Field, rename_rule: case::RenameRule) -> ParsedField {
         default,
         nesting_format,
         skip,
+        is_enum,
         name,
         optional: optional && !require,
         ty,
@@ -462,14 +470,27 @@ impl Intermediate {
                         }
                         DefaultSource::DefaultFn(Some(ty)) => {
                             field_example.push_str(" = \"##.to_string()");
-                            field_example
-                                .push_str(&format!(" + &format!(\"{{:?}}\",  {ty}::default())"));
+                            if field.is_enum {
+                                field_example.push_str(&format!(
+                                    " + &format!(\"\\\"{{:?}}\\\"\",  {ty}::default())"
+                                ));
+                            } else {
+                                field_example.push_str(&format!(
+                                    " + &format!(\"{{:?}}\",  {ty}::default())"
+                                ));
+                            }
                             field_example.push_str(" + &r##\"\n");
                         }
                         DefaultSource::SerdeDefaultFn(fn_str) => {
                             field_example.push_str(" = \"##.to_string()");
-                            field_example
-                                .push_str(&format!(" + &format!(\"{{:?}}\",  {fn_str}())"));
+                            if field.is_enum {
+                                field_example.push_str(&format!(
+                                    " + &format!(\"\\\"{{:?}}\\\"\",  {fn_str}())"
+                                ));
+                            } else {
+                                field_example
+                                    .push_str(&format!(" + &format!(\"{{:?}}\",  {fn_str}())"));
+                            }
                             field_example.push_str("+ &r##\"\n");
                         }
                     }
