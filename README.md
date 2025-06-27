@@ -149,6 +149,36 @@ c = "third"
 
 ```
 
+## Enum Field
+You can also use fieldless enums, but you have to annotate them with `#[toml_example(enum)]` or
+`#[toml_example(is_enum)]` if you mind the keyword highlight you likely get when writing "enum".
+When annotating a field with `#[toml_example(default)]` it will use the [Debug](core::fmt::Debug) implementation.
+However for non-TOML datatypes like enums, this does not work as the value needs to be treated as a string in TOML.
+The `#[toml_example(enum)]` attribute just adds the needed quotes around the [Debug](core::fmt::Debug) implementation
+and can be omitted if a custom [Debug](core::fmt::Debug) already includes those.
+
+```rust
+use toml_example::TomlExample;
+#[derive(TomlExample)]
+struct Config {
+    /// Config.priority is an enum
+    #[toml_example(default)]
+    #[toml_example(enum)]
+    priority: Priority,
+}
+#[derive(Debug, Default)]
+enum Priority {
+    #[default]
+    Important,
+    Trivial,
+}
+assert_eq!(Config::toml_example(),
+r#"# Config.priority is an enum
+priority = "Important"
+
+"#)
+```
+
 [crates-badge]: https://img.shields.io/crates/v/toml-example.svg
 [crate-url]: https://crates.io/crates/toml-example
 [mit-badge]: https://img.shields.io/badge/license-MIT-blue.svg
