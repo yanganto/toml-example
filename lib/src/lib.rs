@@ -83,8 +83,9 @@
 //! "#);
 //! ```
 //!
-//! The `#[toml_example(default)]`, `#[serde(default)]` and `#[serde(default = "default_fn")]`
-//! attributes are also usable as outer attributes of a struct:
+//! The fields of a struct can inherit their defaults from the parent struct when the
+//! `#[toml_example(default)]`, `#[serde(default)]` or `#[serde(default = "default_fn")]`
+//! attribute is set as an outer attribute of the parent struct:
 //!
 //! ```rust
 //! use serde::Serialize;

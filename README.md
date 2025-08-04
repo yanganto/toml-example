@@ -9,19 +9,21 @@ A lib help generate toml example
 This crate provides the `TomlExample` trait and an accompanying derive macro.
 
 Deriving `TomlExample` on a struct will provide `to_example` function help generate toml example file base documentation
-- support `#[serde(default)]`, `#[serde(default = "function_name")]` attributes (`serde` feature, opt-in)
+- support `#[serde(default)]`, `#[serde(default = "function_name")]` attributes on both structs and struct fields (`serde` feature, opt-in)
 - support `#[serde(rename)]`, `#[serde(rename_all = "renaming rules")]`, the renaming rules can be `lowercase`, `UPPERCASE`,
 `PascalCase`, `camelCase`, `snake_case`, `SCREAMING_SNAKE_CASE`, `kebab-case`, `SCREAMING-KEBAB-CASE`
-- provide `#[toml_example(default)]`, `#[toml_example(default = 0)]`, `#[toml_example(default = "default_string")]` attributes
+- provide `#[toml_example(default)]`, `#[toml_example(default = 0)]`, `#[toml_example(default = "default_string")]` attributes on struct fields
+- `#[toml_example(default)]` is also supported as an outer attribute for structs
 - The order matter of attribute macro, if `#[serde(default = ..]` and `#[toml_example(default = ..)]` existing at the same time with different value
 
 ## Quick Example
 ```rust 
 use toml_example::TomlExample;
+use serde::Deserialize;
 
 /// Config is to arrange something or change the controls on a computer or other device
 /// so that it can be used in a particular way
-#[derive(TomlExample)]
+#[derive(TomlExample, Deserialize)]
 struct Config {
     /// Config.a should be a number
     a: usize,
@@ -84,6 +86,36 @@ g = 7
 # Config.h should be a string
 h = "seven"
 
+```
+
+The fields of a struct can inherit their defaults from the parent struct when the
+`#[toml_example(default)]`, `#[serde(default)]` or `#[serde(default = "default_fn")]`
+attribute is set as an outer attribute of the parent struct:
+
+```rust
+use serde::Serialize;
+use toml_example::TomlExample;
+
+#[derive(TomlExample, Serialize)]
+#[serde(default)]
+struct Config {
+    /// Name of the theme to use
+    theme: String,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            theme: String::from("Dark"),
+        }
+    }
+}
+
+assert_eq!(Config::toml_example(),
+r#"# Name of the theme to use
+theme = "Dark"
+
+"#);
 ```
 
 ## Nesting Struct
