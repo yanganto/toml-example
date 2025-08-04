@@ -387,6 +387,53 @@ color = "#FAFAFA"
     }
 
     #[test]
+    fn struct_serde_default() {
+        #[derive(TomlExample, Deserialize, PartialEq)]
+        #[serde(default)]
+        struct Foo {
+            bar: String,
+        }
+        impl Default for Foo {
+            fn default() -> Self {
+                Foo {
+                    bar: String::from("hello world"),
+                }
+            }
+        }
+        assert_eq!(Foo::toml_example(), "bar = \"hello world\"\n\n");
+    }
+
+    #[test]
+    fn struct_serde_default_fn() {
+        #[derive(TomlExample, Deserialize, PartialEq)]
+        #[serde(default = "default")]
+        struct Foo {
+            bar: String,
+        }
+        fn default() -> Foo {
+            Foo {
+                bar: String::from("hello world"),
+            }
+        }
+        assert_eq!(Foo::toml_example(), "bar = \"hello world\"\n\n");
+    }
+
+    #[test]
+    fn struct_toml_example_default() {
+        #[derive(TomlExample, PartialEq)]
+        #[toml_example(default)]
+        struct Foo {
+            yay: &'static str,
+        }
+        impl Default for Foo {
+            fn default() -> Self {
+                Foo { yay: "no, paru!" }
+            }
+        }
+        assert_eq!(Foo::toml_example(), "yay = \"no, paru!\"\n\n");
+    }
+
+    #[test]
     fn no_nesting() {
         /// Inner is a config live in Outer
         #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
