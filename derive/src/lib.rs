@@ -476,41 +476,32 @@ impl Intermediate {
                         }
                         DefaultSource::DefaultFn(None) => match struct_default {
                             Some(DefaultSource::DefaultFn(None)) => {
-                                field_example.push_str(" = \"##.to_string()");
-                                if field.is_enum {
-                                    // FIXME: rustfmt can't handle this
-                                    field_example.push_str(&format!(
-                                        " + &format!(\"\\\"{{:?}}\\\"\",  {struct_ty}::default().{})",
-                                        f.ident.as_ref().expect_or_abort("Named fields always have idents")
-                                    ));
-                                } else {
-                                    field_example.push_str(&format!(
-                                        " + &format!(\"{{:?}}\",  {struct_ty}::default().{})",
-                                        f.ident
-                                            .as_ref()
-                                            .expect_or_abort("Named fields always have idents")
-                                    ));
-                                }
-                                field_example.push_str(" + &r##\"\n");
+                                let suffix = format!(
+                                    ".{}",
+                                    f.ident
+                                        .as_ref()
+                                        .expect_or_abort("Named fields always have and ident")
+                                );
+                                handle_default_fn_source(
+                                    &mut field_example,
+                                    field.is_enum,
+                                    struct_ty.to_string(),
+                                    Some(suffix),
+                                );
                             }
                             Some(DefaultSource::SerdeDefaultFn(ref fn_str)) => {
-                                field_example.push_str(" = \"##.to_string()");
-                                if field.is_enum {
-                                    field_example.push_str(&format!(
-                                        " + &format!(\"\\\"{{:?}}\\\"\",  {fn_str}().{})",
-                                        f.ident
-                                            .as_ref()
-                                            .expect_or_abort("Named fields always have idents")
-                                    ));
-                                } else {
-                                    field_example.push_str(&format!(
-                                        " + &format!(\"{{:?}}\",  {fn_str}().{})",
-                                        f.ident
-                                            .as_ref()
-                                            .expect_or_abort("Named fields always have idents")
-                                    ));
-                                }
-                                field_example.push_str("+ &r##\"\n");
+                                let suffix = format!(
+                                    ".{}",
+                                    f.ident
+                                        .as_ref()
+                                        .expect_or_abort("Named fields always have an ident")
+                                );
+                                handle_serde_default_fn_source(
+                                    &mut field_example,
+                                    field.is_enum,
+                                    fn_str,
+                                    Some(suffix),
+                                );
                             }
                             Some(DefaultSource::DefaultValue(_)) => abort!(
                                 f.ident,
@@ -519,29 +510,15 @@ impl Intermediate {
                             _ => field_example.push_str(" = \"\"\n"),
                         },
                         DefaultSource::DefaultFn(Some(ty)) => {
-                            field_example.push_str(" = \"##.to_string()");
-                            if field.is_enum {
-                                field_example.push_str(&format!(
-                                    " + &format!(\"\\\"{{:?}}\\\"\",  {ty}::default())"
-                                ));
-                            } else {
-                                field_example.push_str(&format!(
-                                    " + &format!(\"{{:?}}\",  {ty}::default())"
-                                ));
-                            }
-                            field_example.push_str(" + &r##\"\n");
+                            handle_default_fn_source(&mut field_example, field.is_enum, ty, None)
                         }
-                        DefaultSource::SerdeDefaultFn(fn_str) => {
-                            field_example.push_str(" = \"##.to_string()");
-                            if field.is_enum {
-                                field_example.push_str(&format!(
-                                    " + &format!(\"\\\"{{:?}}\\\"\",  {fn_str}())"
-                                ));
-                            } else {
-                                field_example
-                                    .push_str(&format!(" + &format!(\"{{:?}}\",  {fn_str}())"));
-                            }
-                            field_example.push_str("+ &r##\"\n");
+                        DefaultSource::SerdeDefaultFn(ref fn_str) => {
+                            handle_serde_default_fn_source(
+                                &mut field_example,
+                                field.is_enum,
+                                fn_str,
+                                None,
+                            )
                         }
                     }
                     field_example.push('\n');
@@ -553,4 +530,42 @@ impl Intermediate {
 
         field_example
     }
+}
+
+fn handle_default_fn_source(
+    field_example: &mut String,
+    is_enum: bool,
+    type_ident: String,
+    suffix: Option<String>,
+) {
+    let suffix = suffix.unwrap_or_default();
+    field_example.push_str(" = \"##.to_string()");
+    if is_enum {
+        field_example.push_str(&format!(
+            " + &format!(\"\\\"{{:?}}\\\"\",  {type_ident}::default(){suffix})"
+        ));
+    } else {
+        field_example.push_str(&format!(
+            " + &format!(\"{{:?}}\",  {type_ident}::default(){suffix})"
+        ));
+    }
+    field_example.push_str(" + &r##\"\n");
+}
+
+fn handle_serde_default_fn_source(
+    field_example: &mut String,
+    is_enum: bool,
+    fn_str: &String,
+    suffix: Option<String>,
+) {
+    let suffix = suffix.unwrap_or_default();
+    field_example.push_str(" = \"##.to_string()");
+    if is_enum {
+        field_example.push_str(&format!(
+            " + &format!(\"\\\"{{:?}}\\\"\",  {fn_str}(){suffix})"
+        ));
+    } else {
+        field_example.push_str(&format!(" + &format!(\"{{:?}}\",  {fn_str}(){suffix})"));
+    }
+    field_example.push_str("+ &r##\"\n");
 }
