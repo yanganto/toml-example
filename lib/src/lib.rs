@@ -392,15 +392,25 @@ color = "#FAFAFA"
         #[serde(default)]
         struct Foo {
             bar: String,
+            #[serde(default)]
+            x: usize,
         }
         impl Default for Foo {
             fn default() -> Self {
                 Foo {
                     bar: String::from("hello world"),
+                    x: 12,
                 }
             }
         }
-        assert_eq!(Foo::toml_example(), "bar = \"hello world\"\n\n");
+        assert_eq!(
+            Foo::toml_example(),
+            r##"bar = "hello world"
+
+x = 0
+
+"##
+        );
     }
 
     #[test]
@@ -409,28 +419,53 @@ color = "#FAFAFA"
         #[serde(default = "default")]
         struct Foo {
             bar: String,
+            #[toml_example(default = "field override")]
+            baz: String,
         }
         fn default() -> Foo {
             Foo {
                 bar: String::from("hello world"),
+                baz: String::from("custom default"),
             }
         }
-        assert_eq!(Foo::toml_example(), "bar = \"hello world\"\n\n");
+        assert_eq!(
+            Foo::toml_example(),
+            r##"bar = "hello world"
+
+baz = "field override"
+
+"##
+        );
     }
 
     #[test]
     fn struct_toml_example_default() {
-        #[derive(TomlExample, PartialEq)]
+        #[derive(TomlExample, Deserialize, PartialEq)]
         #[toml_example(default)]
         struct Foo {
+            #[serde(default = "paru")]
             yay: &'static str,
+            aur_is_useful: bool,
         }
         impl Default for Foo {
             fn default() -> Self {
-                Foo { yay: "no, paru!" }
+                Foo {
+                    yay: "yay!",
+                    aur_is_useful: true,
+                }
             }
         }
-        assert_eq!(Foo::toml_example(), "yay = \"no, paru!\"\n\n");
+        fn paru() -> &'static str {
+            "no, paru!"
+        }
+        assert_eq!(
+            Foo::toml_example(),
+            r##"yay = "no, paru!"
+
+aur_is_useful = true
+
+"##
+        );
     }
 
     #[test]
