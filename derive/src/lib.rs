@@ -2,6 +2,7 @@ extern crate proc_macro;
 
 use proc_macro2::Ident;
 use proc_macro2::TokenStream;
+use proc_macro_error2::OptionExt;
 use proc_macro_error2::{abort, proc_macro_error};
 use quote::quote;
 use syn::{
@@ -213,12 +214,7 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
                     tokens: _tokens,
                     ..
                 }),
-            ) if path
-                .segments
-                .last()
-                .map(|s| s.ident == "serde")
-                .unwrap_or_default() =>
-            {
+            ) if path.segments.last().is_some_and(|s| s.ident == "serde") => {
                 #[cfg(feature = "serde")]
                 {
                     let token_str = _tokens.to_string();
@@ -301,7 +297,11 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
     }
 }
 
-fn parse_field(field: &Field, rename_rule: case::RenameRule) -> ParsedField {
+fn parse_field(
+    struct_default: Option<&DefaultSource>,
+    field: &Field,
+    rename_rule: case::RenameRule,
+) -> ParsedField {
     let mut default_value = String::new();
     let mut optional = false;
     let AttrMeta {
@@ -324,6 +324,7 @@ fn parse_field(field: &Field, rename_rule: case::RenameRule) -> ParsedField {
         Some(DefaultSource::DefaultFn(_)) => DefaultSource::DefaultFn(ty.clone()),
         Some(DefaultSource::SerdeDefaultFn(f)) => DefaultSource::SerdeDefaultFn(f),
         Some(DefaultSource::DefaultValue(v)) => DefaultSource::DefaultValue(v),
+        _ if struct_default.is_some() => DefaultSource::DefaultFn(None),
         _ => DefaultSource::DefaultValue(default_value),
     };
     let name = if let Some(field_name) = field.ident.as_ref().map(|i| i.to_string()) {
@@ -343,7 +344,7 @@ fn parse_field(field: &Field, rename_rule: case::RenameRule) -> ParsedField {
     }
 }
 
-fn push_doc_string(example: &mut String, docs: &Vec<String>) {
+fn push_doc_string(example: &mut String, docs: &[String]) {
     for doc in docs.iter() {
         example.push('#');
         example.push_str(doc);
@@ -371,7 +372,10 @@ impl Intermediate {
         let struct_name = ident.clone();
 
         let AttrMeta {
-            docs, rename_rule, ..
+            docs,
+            default_source,
+            rename_rule,
+            ..
         } = parse_attrs(&attrs);
 
         let struct_doc = {
@@ -386,7 +390,7 @@ impl Intermediate {
             abort!(ident, "TomlExample derive only use for struct")
         };
 
-        let field_example = Self::parse_field_examples(fields, rename_rule);
+        let field_example = Self::parse_field_examples(ident, default_source, fields, rename_rule);
 
         Ok(Intermediate {
             struct_name,
@@ -416,13 +420,18 @@ impl Intermediate {
         })
     }
 
-    fn parse_field_examples(fields: &Fields, rename_rule: case::RenameRule) -> String {
+    fn parse_field_examples(
+        struct_ty: Ident,
+        struct_default: Option<DefaultSource>,
+        fields: &Fields,
+        rename_rule: case::RenameRule,
+    ) -> String {
         let mut field_example = "r##\"".to_string();
         let mut nesting_field_example = "".to_string();
 
         if let Named(named_fields) = fields {
             for f in named_fields.named.iter() {
-                let field = parse_field(f, rename_rule);
+                let field = parse_field(struct_default.as_ref(), f, rename_rule);
                 if field.skip {
                     continue;
                 }
@@ -465,9 +474,50 @@ impl Intermediate {
                             field_example.push_str(&default);
                             field_example.push('\n');
                         }
-                        DefaultSource::DefaultFn(None) => {
-                            field_example.push_str(" = \"\"\n");
-                        }
+                        DefaultSource::DefaultFn(None) => match struct_default {
+                            Some(DefaultSource::DefaultFn(None)) => {
+                                field_example.push_str(" = \"##.to_string()");
+                                if field.is_enum {
+                                    // FIXME: rustfmt can't handle this
+                                    field_example.push_str(&format!(
+                                        " + &format!(\"\\\"{{:?}}\\\"\",  {struct_ty}::default().{})",
+                                        f.ident.as_ref().expect_or_abort("Named fields always have idents")
+                                    ));
+                                } else {
+                                    field_example.push_str(&format!(
+                                        " + &format!(\"{{:?}}\",  {struct_ty}::default().{})",
+                                        f.ident
+                                            .as_ref()
+                                            .expect_or_abort("Named fields always have idents")
+                                    ));
+                                }
+                                field_example.push_str(" + &r##\"\n");
+                            }
+                            Some(DefaultSource::SerdeDefaultFn(ref fn_str)) => {
+                                field_example.push_str(" = \"##.to_string()");
+                                if field.is_enum {
+                                    field_example.push_str(&format!(
+                                        " + &format!(\"\\\"{{:?}}\\\"\",  {fn_str}().{})",
+                                        f.ident
+                                            .as_ref()
+                                            .expect_or_abort("Named fields always have idents")
+                                    ));
+                                } else {
+                                    field_example.push_str(&format!(
+                                        " + &format!(\"{{:?}}\",  {fn_str}().{})",
+                                        f.ident
+                                            .as_ref()
+                                            .expect_or_abort("Named fields always have idents")
+                                    ));
+                                }
+                                field_example.push_str("+ &r##\"\n");
+                            }
+                            Some(DefaultSource::DefaultValue(_)) => abort!(
+                                f.ident,
+                                "Setting a default value on a struct is not supported!"
+                            ),
+                            _ => field_example.push_str(" = \"\"\n"),
+                        },
                         DefaultSource::DefaultFn(Some(ty)) => {
                             field_example.push_str(" = \"##.to_string()");
                             if field.is_enum {
