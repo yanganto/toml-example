@@ -10,19 +10,19 @@
 //! /// so that it can be used in a particular way
 //! #[derive(TomlExample)]
 //! struct Config {
-//! /// Config.a should be a number
-//! a: usize,
-//! /// Config.b should be a string
-//! b: String,
-//! /// Optional Config.c is a number
-//! c: Option<usize>,
-//! /// Config.d is a list of number
-//! d: Vec<usize>,
-//! #[toml_example(default =7)]
-//! e: usize,
-//! /// Config.f should be a string
-//! #[toml_example(default = "seven")]
-//! f: String,
+//!     /// Config.a should be a number
+//!     a: usize,
+//!     /// Config.b should be a string
+//!     b: String,
+//!     /// Optional Config.c is a number
+//!     c: Option<usize>,
+//!     /// Config.d is a list of number
+//!     d: Vec<usize>,
+//!     #[toml_example(default =7)]
+//!     e: usize,
+//!     /// Config.f should be a string
+//!     #[toml_example(default = "seven")]
+//!     f: String,
 //! }
 //! assert_eq!( Config::toml_example(),
 //! r#"# Config is to arrange something or change the controls on a computer or other device
@@ -60,8 +60,8 @@
 //! /// Service with specific port
 //! #[derive(TomlExample)]
 //! struct Service {
-//! /// port should be a number
-//! #[toml_example(default = 80)]
+//!     /// port should be a number
+//!     #[toml_example(default = 80)]
 //!     port: usize,
 //! }
 //! #[derive(TomlExample)]
@@ -79,6 +79,35 @@
 //! [services.http]
 //! ## port should be a number
 //! port = 80
+//!
+//! "#);
+//! ```
+//!
+//! The `#[toml_example(default)]`, `#[serde(default)]` and `#[serde(default = "default_fn")]`
+//! attributes are also usable as outer attributes of a struct:
+//!
+//! ```rust
+//! use serde::Serialize;
+//! use toml_example::TomlExample;
+//!
+//! #[derive(TomlExample, Serialize)]
+//! #[serde(default)]
+//! struct Config {
+//!     /// Name of the theme to use
+//!     theme: String,
+//! }
+//!
+//! impl Default for Config {
+//!     fn default() -> Self {
+//!         Self {
+//!             theme: String::from("Dark"),
+//!         }
+//!     }
+//! }
+//!
+//! assert_eq!(Config::toml_example(),
+//! r#"# Name of the theme to use
+//! theme = "Dark"
 //!
 //! "#);
 //! ```
