@@ -190,7 +190,11 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
     let mut require = false;
     let mut skip = false;
     let mut is_enum = false;
+    // mut in serde feature
+    #[allow(unused_mut)]
     let mut rename = None;
+    // mut in serde feature
+    #[allow(unused_mut)]
     let mut rename_rule = case::RenameRule::None;
 
     for attr in attrs.iter() {

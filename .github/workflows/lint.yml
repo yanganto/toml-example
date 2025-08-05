@@ -18,4 +18,4 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Test crate
-        run: nix develop -c cargo clippy
+        run: nix develop -c cargo clippy -- --deny "warnings"

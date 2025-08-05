@@ -44,6 +44,8 @@ static RENAME_RULES: &[(&str, RenameRule)] = &[
     ("SCREAMING-KEBAB-CASE", ScreamingKebabCase),
 ];
 
+// Used for serde feature
+#[allow(dead_code)]
 impl RenameRule {
     pub fn from_str(rename_all_str: &str) -> Result<Self, ParseError> {
         for (name, rule) in RENAME_RULES {
@@ -91,7 +93,7 @@ pub struct ParseError<'a> {
     unknown: &'a str,
 }
 
-impl<'a> Display for ParseError<'a> {
+impl Display for ParseError<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str("unknown rename rule `rename_all = ")?;
         Debug::fmt(self.unknown, f)?;
