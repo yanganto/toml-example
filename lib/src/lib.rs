@@ -10,19 +10,19 @@
 //! /// so that it can be used in a particular way
 //! #[derive(TomlExample)]
 //! struct Config {
-//! /// Config.a should be a number
-//! a: usize,
-//! /// Config.b should be a string
-//! b: String,
-//! /// Optional Config.c is a number
-//! c: Option<usize>,
-//! /// Config.d is a list of number
-//! d: Vec<usize>,
-//! #[toml_example(default =7)]
-//! e: usize,
-//! /// Config.f should be a string
-//! #[toml_example(default = "seven")]
-//! f: String,
+//!     /// Config.a should be a number
+//!     a: usize,
+//!     /// Config.b should be a string
+//!     b: String,
+//!     /// Optional Config.c is a number
+//!     c: Option<usize>,
+//!     /// Config.d is a list of number
+//!     d: Vec<usize>,
+//!     #[toml_example(default =7)]
+//!     e: usize,
+//!     /// Config.f should be a string
+//!     #[toml_example(default = "seven")]
+//!     f: String,
 //! }
 //! assert_eq!( Config::toml_example(),
 //! r#"# Config is to arrange something or change the controls on a computer or other device
@@ -60,8 +60,8 @@
 //! /// Service with specific port
 //! #[derive(TomlExample)]
 //! struct Service {
-//! /// port should be a number
-//! #[toml_example(default = 80)]
+//!     /// port should be a number
+//!     #[toml_example(default = 80)]
 //!     port: usize,
 //! }
 //! #[derive(TomlExample)]
@@ -79,6 +79,36 @@
 //! [services.http]
 //! ## port should be a number
 //! port = 80
+//!
+//! "#);
+//! ```
+//!
+//! The fields of a struct can inherit their defaults from the parent struct when the
+//! `#[toml_example(default)]`, `#[serde(default)]` or `#[serde(default = "default_fn")]`
+//! attribute is set as an outer attribute of the parent struct:
+//!
+//! ```rust
+//! use serde::Serialize;
+//! use toml_example::TomlExample;
+//!
+//! #[derive(TomlExample, Serialize)]
+//! #[serde(default)]
+//! struct Config {
+//!     /// Name of the theme to use
+//!     theme: String,
+//! }
+//!
+//! impl Default for Config {
+//!     fn default() -> Self {
+//!         Self {
+//!             theme: String::from("Dark"),
+//!         }
+//!     }
+//! }
+//!
+//! assert_eq!(Config::toml_example(),
+//! r#"# Name of the theme to use
+//! theme = "Dark"
 //!
 //! "#);
 //! ```
@@ -381,6 +411,88 @@ g = ["super looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong str
 
 # Config.color should be a hex color code
 color = "#FAFAFA"
+
+"##
+        );
+    }
+
+    #[test]
+    fn struct_serde_default() {
+        #[derive(TomlExample, Deserialize, PartialEq)]
+        #[serde(default)]
+        struct Foo {
+            bar: String,
+            #[serde(default)]
+            x: usize,
+        }
+        impl Default for Foo {
+            fn default() -> Self {
+                Foo {
+                    bar: String::from("hello world"),
+                    x: 12,
+                }
+            }
+        }
+        assert_eq!(
+            Foo::toml_example(),
+            r##"bar = "hello world"
+
+x = 0
+
+"##
+        );
+    }
+
+    #[test]
+    fn struct_serde_default_fn() {
+        #[derive(TomlExample, Deserialize, PartialEq)]
+        #[serde(default = "default")]
+        struct Foo {
+            bar: String,
+            #[toml_example(default = "field override")]
+            baz: String,
+        }
+        fn default() -> Foo {
+            Foo {
+                bar: String::from("hello world"),
+                baz: String::from("custom default"),
+            }
+        }
+        assert_eq!(
+            Foo::toml_example(),
+            r##"bar = "hello world"
+
+baz = "field override"
+
+"##
+        );
+    }
+
+    #[test]
+    fn struct_toml_example_default() {
+        #[derive(TomlExample, Deserialize, PartialEq)]
+        #[toml_example(default)]
+        struct Foo {
+            #[serde(default = "paru")]
+            yay: &'static str,
+            aur_is_useful: bool,
+        }
+        impl Default for Foo {
+            fn default() -> Self {
+                Foo {
+                    yay: "yay!",
+                    aur_is_useful: true,
+                }
+            }
+        }
+        fn paru() -> &'static str {
+            "no, paru!"
+        }
+        assert_eq!(
+            Foo::toml_example(),
+            r##"yay = "no, paru!"
+
+aur_is_useful = true
 
 "##
         );
