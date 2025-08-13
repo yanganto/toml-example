@@ -4,10 +4,9 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     rust-overlay.url = "github:oxalica/rust-overlay";
     flake-utils.url = "github:numtide/flake-utils";
-    dependency-refresh.url = "github:yanganto/dependency-refresh";
   };
 
-  outputs = { self, rust-overlay, nixpkgs, flake-utils, dependency-refresh }:
+  outputs = { self, rust-overlay, nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         overlays = [ (import rust-overlay) ];
