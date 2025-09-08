@@ -66,18 +66,36 @@ impl ParsedField {
     }
 
     fn label(&self) -> String {
-        if self.flatten {
-            return String::new();
-        }
         match self.nesting_format {
             Some(NestingFormat::Section(NestingType::Vec)) => {
+                if self.flatten {
+                    abort!(
+                        "flatten",
+                        format!(
+                            "Only structs and maps can be flattened! \
+                            (But field `{}` is a collection)",
+                            self.name
+                        )
+                    )
+                }
                 self.prefix() + &format!("[[{}]]", self.name)
             }
             Some(NestingFormat::Section(NestingType::Dict)) => {
-                self.prefix() + &format!("[{}.{}]", self.name, self.default_key())
+                self.prefix()
+                    + &if self.flatten {
+                        format!("[{}]", self.default_key())
+                    } else {
+                        format!("[{}.{}]", self.name, self.default_key())
+                    }
             }
             Some(NestingFormat::Prefix) => "".to_string(),
-            _ => self.prefix() + &format!("[{}]", self.name),
+            _ => {
+                if self.flatten {
+                    self.prefix()
+                } else {
+                    self.prefix() + &format!("[{}]", self.name)
+                }
+            }
         }
     }
 
