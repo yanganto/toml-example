@@ -32,6 +32,7 @@ struct AttrMeta {
     require: bool,
     skip: bool,
     is_enum: bool,
+    flatten: bool,
     rename: Option<String>,
     rename_rule: case::RenameRule,
 }
@@ -42,6 +43,7 @@ struct ParsedField {
     nesting_format: Option<NestingFormat>,
     skip: bool,
     is_enum: bool,
+    flatten: bool,
     name: String,
     optional: bool,
     ty: Option<String>,
@@ -64,6 +66,9 @@ impl ParsedField {
     }
 
     fn label(&self) -> String {
+        if self.flatten {
+            return String::new();
+        }
         match self.nesting_format {
             Some(NestingFormat::Section(NestingType::Vec)) => {
                 self.prefix() + &format!("[[{}]]", self.name)
@@ -190,6 +195,7 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
     let mut require = false;
     let mut skip = false;
     let mut is_enum = false;
+    let mut flatten = false;
     // mut in serde feature
     #[allow(unused_mut)]
     let mut rename = None;
@@ -222,31 +228,36 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
                 #[cfg(feature = "serde")]
                 {
                     let token_str = _tokens.to_string();
-                    if token_str.starts_with("default") {
-                        if let Some((_, s)) = token_str.split_once('=') {
-                            default_source = Some(DefaultSource::SerdeDefaultFn(
-                                s.trim().trim_matches('"').into(),
-                            ));
-                        } else {
-                            default_source = Some(DefaultSource::DefaultFn(None));
-                        }
-                    }
-                    if token_str == "skip_deserializing" || token_str == "skip" {
-                        skip = true;
-                    }
-                    if token_str.starts_with("rename") {
-                        if token_str.starts_with("rename_all") {
-                            if let Some((_, s)) = token_str.split_once('=') {
-                                rename_rule = if let Ok(r) =
-                                    case::RenameRule::from_str(s.trim().trim_matches('"'))
-                                {
-                                    r
-                                } else {
-                                    abort!(&_tokens, "unsupported rename rule")
-                                }
+                    for attribute in token_str.split(',').map(str::trim) {
+                        if attribute.starts_with("default") {
+                            if let Some((_, s)) = attribute.split_once('=') {
+                                default_source = Some(DefaultSource::SerdeDefaultFn(
+                                    s.trim().trim_matches('"').into(),
+                                ));
+                            } else {
+                                default_source = Some(DefaultSource::DefaultFn(None));
                             }
-                        } else if let Some((_, s)) = token_str.split_once('=') {
-                            rename = Some(s.trim().trim_matches('"').into());
+                        }
+                        if attribute == "skip_deserializing" || attribute == "skip" {
+                            skip = true;
+                        }
+                        if attribute == "flatten" {
+                            flatten = true;
+                        }
+                        if attribute.starts_with("rename") {
+                            if attribute.starts_with("rename_all") {
+                                if let Some((_, s)) = attribute.split_once('=') {
+                                    rename_rule = if let Ok(r) =
+                                        case::RenameRule::from_str(s.trim().trim_matches('"'))
+                                    {
+                                        r
+                                    } else {
+                                        abort!(&_tokens, "unsupported rename rule")
+                                    }
+                                }
+                            } else if let Some((_, s)) = attribute.split_once('=') {
+                                rename = Some(s.trim().trim_matches('"').into());
+                            }
                         }
                     }
                 }
@@ -281,6 +292,8 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
                     skip = true;
                 } else if token_str == "is_enum" || token_str == "enum" {
                     is_enum = true;
+                } else if token_str == "flatten" {
+                    flatten = true;
                 } else {
                     abort!(&attr, format!("{} is not allowed attribute", token_str))
                 }
@@ -296,6 +309,7 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
         require,
         skip,
         is_enum,
+        flatten,
         rename,
         rename_rule,
     }
@@ -314,6 +328,7 @@ fn parse_field(
         mut nesting_format,
         skip,
         is_enum,
+        flatten,
         rename,
         require,
         ..
@@ -342,6 +357,7 @@ fn parse_field(
         nesting_format,
         skip,
         is_enum,
+        flatten,
         name,
         optional: optional && !require,
         ty,
