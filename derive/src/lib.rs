@@ -488,7 +488,14 @@ impl Intermediate {
                         } else {
                             (
                                 &mut nesting_field_example,
-                                if field.flatten { "" } else { "\n" },
+                                if field.flatten
+                                    && field.nesting_format
+                                        == Some(NestingFormat::Section(NestingType::None))
+                                {
+                                    ""
+                                } else {
+                                    "\n"
+                                },
                             )
                         };
 
