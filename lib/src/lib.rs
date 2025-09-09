@@ -1,6 +1,6 @@
 //! This crate provides the [`TomlExample`] trait and an accompanying derive macro.
 //!
-//! Deriving [`TomlExample`] on a struct will generate functions `toml_example()`,  `to_toml_example(file_name)` for generating toml example content.
+//! Deriving [`TomlExample`] on a struct will generate functions `toml_example()`, `to_toml_example(file_name)` for generating toml example content.
 //!
 //! The following code shows how `toml-example` can be used.
 //! ```rust
@@ -50,7 +50,7 @@
 //! Also, toml-example will use `#[serde(default)]`, `#[serde(default = "default_fn")]` for the
 //! example value.
 //!
-//! With nestring structure, `#[toml_example(nesting)]` should set on the field as following
+//! With nesting structure, `#[toml_example(nesting)]` should set on the field as following
 //! example.
 //!
 //! ```rust
@@ -150,7 +150,7 @@
 //! "enum".<br>
 //! When annotating a field with `#[toml_example(default)]` it will use the
 //! [Debug](core::fmt::Debug) implementation.
-//! However for non-TOML datatypes like enums, this does not work as the value needs to be treated
+//! However for non-TOML data types like enums, this does not work as the value needs to be treated
 //! as a string in TOML. The `#[toml_example(enum)]` attribute just adds the needed quotes around
 //! the [Debug](core::fmt::Debug) implementation and can be omitted if a custom
 //! [Debug](core::fmt::Debug) already includes those.
