@@ -997,6 +997,27 @@ ab3 = "B"
     }
 
     #[test]
+    fn multi_attr_escaping() {
+        #[derive(TomlExample, Deserialize, PartialEq)]
+        struct ConfigWrapper {
+            #[toml_example(default = ["hello", "{nice :)\""], require)]
+            vec: Option<Vec<String>>,
+
+            #[toml_example(require, default = ["\"\\\n}])", "super (fancy\\! :-) )"])]
+            list: Option<[String; 2]>,
+        }
+
+        assert_eq!(
+            ConfigWrapper::toml_example(),
+            r#"vec = ["hello", "{nice :)\""]
+
+list = ["\"\\\n}])", "super (fancy\\! :-) )"]
+
+"#
+        );
+    }
+
+    #[test]
     fn r_sharp_field() {
         #[derive(TomlExample)]
         #[allow(dead_code)]
