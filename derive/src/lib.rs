@@ -486,7 +486,10 @@ impl Intermediate {
                         if field.nesting_format == Some(NestingFormat::Prefix) {
                             (&mut field_example, "")
                         } else {
-                            (&mut nesting_field_example, "\n")
+                            (
+                                &mut nesting_field_example,
+                                if field.flatten { "" } else { "\n" },
+                            )
                         };
 
                     field.push_doc_to_string(example);

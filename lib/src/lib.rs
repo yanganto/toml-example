@@ -159,8 +159,7 @@
 //! #[derive(TomlExample)]
 //! struct Config {
 //!     /// Config.priority is an enum
-//!     #[toml_example(default)]
-//!     #[toml_example(enum)]
+//!     #[toml_example(default, enum)]
 //!     priority: Priority,
 //! }
 //! #[derive(Debug, Default)]
@@ -951,8 +950,7 @@ a = 0
         #[allow(dead_code)]
         struct Config {
             /// Config.ab is an enum
-            #[toml_example(enum)]
-            #[toml_example(default)]
+            #[toml_example(enum, default)]
             ab: AB,
             /// Config.ab2 is an enum too
             #[toml_example(is_enum)]
@@ -982,6 +980,20 @@ ab3 = "B"
 
 "#
         );
+    }
+
+    #[test]
+    fn flatten() {
+        #[derive(TomlExample)]
+        struct ItemWrapper {
+            #[toml_example(flatten, nesting)]
+            _item: Item,
+        }
+        #[derive(TomlExample)]
+        struct Item {
+            _value: String,
+        }
+        assert_eq!(ItemWrapper::toml_example(), Item::toml_example());
     }
 
     #[test]
