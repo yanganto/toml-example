@@ -57,7 +57,7 @@ Config::to_toml_example("example.toml");  // write example to a file
 let example = Config::toml_example();
 ```
 
-Toml example base on the doc string of each field
+Toml example base on the docstring of each field
 ```toml
 # Config is to arrange something or change the controls on a computer or other device
 # so that it can be used in a particular way
@@ -135,8 +135,7 @@ Please add `#[toml_example(nesting)]`, or `#[toml_example(nesting = prefix)]` on
   #[allow(dead_code)]
   struct Node {
       /// Services are running in the node
-      #[toml_example(nesting)]
-      #[toml_example(default = http)]
+      #[toml_example(default = http, nesting)]
       services: HashMap<String, Service>,
   }
 ```
@@ -149,6 +148,77 @@ Please add `#[toml_example(nesting)]`, or `#[toml_example(nesting = prefix)]` on
 port = 80
 
 ```
+
+## Flattening
+Flattening means treating the fields of a nested struct as if they were defined directly in the wrapping struct.
+```rust
+#[derive(TomlExample)]
+struct ItemWrapper {
+    #[toml_example(flatten, nesting)]
+    item: Item,
+}
+#[derive(TomlExample)]
+struct Item {
+    value: String,
+}
+
+assert_eq!(ItemWrapper::toml_example(), Item::toml_example());
+```
+
+This works with maps too!
+
+```rust
+#[derive(TomlExample, Deserialize)]
+struct MainConfig {
+    #[serde(flatten)]
+    #[toml_example(nesting)]
+    nested: HashMap<String, ConfigItem>,
+}
+#[derive(TomlExample, Deserialize)]
+struct ConfigItem {
+    #[toml_example(default = false)]
+    enabled: bool,
+}
+
+let example = MainConfig::toml_example();
+assert!(toml::from_str::<MainConfig>(&example).is_ok());
+println!("{example}");
+```
+```toml
+[example]
+enabled = false
+```
+
+## Enum Field
+You can also use fieldless enums, but you have to annotate them with `#[toml_example(enum)]` or
+`#[toml_example(is_enum)]` if you mind the keyword highlight you likely get when writing "enum".
+When annotating a field with `#[toml_example(default)]` it will use the [Debug](core::fmt::Debug) implementation.
+However for non-TOML data types like enums, this does not work as the value needs to be treated as a string in TOML.
+The `#[toml_example(enum)]` attribute just adds the needed quotes around the [Debug](core::fmt::Debug) implementation
+and can be omitted if a custom [Debug](core::fmt::Debug) already includes those.
+
+```rust
+use toml_example::TomlExample;
+#[derive(TomlExample)]
+struct Config {
+    /// Config.priority is an enum
+    #[toml_example(enum, default)]
+    priority: Priority,
+}
+#[derive(Debug, Default)]
+enum Priority {
+    #[default]
+    Important,
+    Trivial,
+}
+assert_eq!(Config::toml_example(),
+r#"# Config.priority is an enum
+priority = "Important"
+
+"#)
+```
+
+## More
 If you want an optional field become a required field in example,
 place the `#[toml_example(require)]` on the field.
 If you want to skip some field you can use `#[toml_example(skip)]`,
@@ -163,8 +233,7 @@ struct Config {
     /// Config.b is an optional string
     #[toml_example(require)]
     b: Option<String>,
-    #[toml_example(require)]
-    #[toml_example(default = "third")]
+    #[toml_example(require, default = "third")]
     c: Option<String>,
     #[toml_example(skip)]
     d: usize,
@@ -179,36 +248,6 @@ b = ""
 
 c = "third"
 
-```
-
-## Enum Field
-You can also use fieldless enums, but you have to annotate them with `#[toml_example(enum)]` or
-`#[toml_example(is_enum)]` if you mind the keyword highlight you likely get when writing "enum".
-When annotating a field with `#[toml_example(default)]` it will use the [Debug](core::fmt::Debug) implementation.
-However for non-TOML datatypes like enums, this does not work as the value needs to be treated as a string in TOML.
-The `#[toml_example(enum)]` attribute just adds the needed quotes around the [Debug](core::fmt::Debug) implementation
-and can be omitted if a custom [Debug](core::fmt::Debug) already includes those.
-
-```rust
-use toml_example::TomlExample;
-#[derive(TomlExample)]
-struct Config {
-    /// Config.priority is an enum
-    #[toml_example(default)]
-    #[toml_example(enum)]
-    priority: Priority,
-}
-#[derive(Debug, Default)]
-enum Priority {
-    #[default]
-    Important,
-    Trivial,
-}
-assert_eq!(Config::toml_example(),
-r#"# Config.priority is an enum
-priority = "Important"
-
-"#)
 ```
 
 [crates-badge]: https://img.shields.io/crates/v/toml-example.svg

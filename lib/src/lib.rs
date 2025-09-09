@@ -68,8 +68,7 @@
 //! #[allow(dead_code)]
 //! struct Node {
 //!     /// Services are running in the node
-//!     #[toml_example(nesting)]
-//!     #[toml_example(default = http)]
+//!     #[toml_example(default = http, nesting)]
 //!     services: HashMap<String, Service>,
 //! }
 //!
@@ -79,6 +78,51 @@
 //! [services.http]
 //! ## port should be a number
 //! port = 80
+//!
+//! "#);
+//! ```
+//!
+//! Flattened items are supported as well.
+//!
+//! ```rust
+//! use toml_example::TomlExample;
+//!
+//! #[derive(TomlExample)]
+//! struct ItemWrapper {
+//!     #[toml_example(flatten, nesting)]
+//!     item: Item,
+//! }
+//! #[derive(TomlExample)]
+//! struct Item {
+//!     value: String,
+//! }
+//!
+//! assert_eq!(ItemWrapper::toml_example(), Item::toml_example());
+//! ```
+//!
+//! Flattening works with maps too!
+//!
+//! ```rust
+//! use serde::Deserialize;
+//! use toml_example::TomlExample;
+//! # use std::collections::HashMap;
+//!
+//! #[derive(TomlExample, Deserialize)]
+//! struct MainConfig {
+//!     #[serde(flatten)]
+//!     #[toml_example(nesting)]
+//!     nested: HashMap<String, ConfigItem>,
+//! }
+//! #[derive(TomlExample, Deserialize)]
+//! struct ConfigItem {
+//!     #[toml_example(default = false)]
+//!     enabled: bool,
+//! }
+//!
+//! let example = MainConfig::toml_example();
+//! assert!(toml::from_str::<MainConfig>(&example).is_ok());
+//! assert_eq!(example, r#"[example]
+//! enabled = false
 //!
 //! "#);
 //! ```
@@ -127,8 +171,7 @@
 //!     /// Config.b is an optional string
 //!     #[toml_example(require)]
 //!     b: Option<String>,
-//!     #[toml_example(require)]
-//!     #[toml_example(default = "third")]
+//!     #[toml_example(require, default = "third")]
 //!     c: Option<String>,
 //!     #[toml_example(skip)]
 //!     d: usize,
