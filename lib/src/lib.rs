@@ -933,6 +933,34 @@ port = 80
     }
 
     #[test]
+    fn recursive_nesting() {
+        #[derive(TomlExample, Default, Debug, Deserialize, PartialEq)]
+        struct Outer {
+            #[toml_example(nesting)]
+            _middle: Middle,
+        }
+        #[derive(TomlExample, Default, Debug, Deserialize, PartialEq)]
+        struct Middle {
+            #[toml_example(nesting)]
+            _inner: Inner,
+        }
+        #[derive(TomlExample, Default, Debug, Deserialize, PartialEq)]
+        struct Inner {
+            _value: usize,
+        }
+        let example = Outer::toml_example();
+        assert_eq!(toml::from_str::<Outer>(&example).unwrap(), Outer::default());
+        assert_eq!(
+            example,
+            r#"[_middle]
+[_middle._inner]
+_value = 0
+
+"#
+        );
+    }
+
+    #[test]
     fn require() {
         #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
         #[allow(dead_code)]
