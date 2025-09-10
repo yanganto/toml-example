@@ -1,6 +1,6 @@
 //! This crate provides the [`TomlExample`] trait and an accompanying derive macro.
 //!
-//! Deriving [`TomlExample`] on a struct will generate functions `toml_example()`,  `to_toml_example(file_name)` for generating toml example content.
+//! Deriving [`TomlExample`] on a struct will generate functions `toml_example()`, `to_toml_example(file_name)` for generating toml example content.
 //!
 //! The following code shows how `toml-example` can be used.
 //! ```rust
@@ -50,7 +50,7 @@
 //! Also, toml-example will use `#[serde(default)]`, `#[serde(default = "default_fn")]` for the
 //! example value.
 //!
-//! With nestring structure, `#[toml_example(nesting)]` should set on the field as following
+//! With nesting structure, `#[toml_example(nesting)]` should set on the field as following
 //! example.
 //!
 //! ```rust
@@ -68,8 +68,7 @@
 //! #[allow(dead_code)]
 //! struct Node {
 //!     /// Services are running in the node
-//!     #[toml_example(nesting)]
-//!     #[toml_example(default = http)]
+//!     #[toml_example(default = http, nesting)]
 //!     services: HashMap<String, Service>,
 //! }
 //!
@@ -79,6 +78,51 @@
 //! [services.http]
 //! ## port should be a number
 //! port = 80
+//!
+//! "#);
+//! ```
+//!
+//! Flattened items are supported as well.
+//!
+//! ```rust
+//! use toml_example::TomlExample;
+//!
+//! #[derive(TomlExample)]
+//! struct ItemWrapper {
+//!     #[toml_example(flatten, nesting)]
+//!     item: Item,
+//! }
+//! #[derive(TomlExample)]
+//! struct Item {
+//!     value: String,
+//! }
+//!
+//! assert_eq!(ItemWrapper::toml_example(), Item::toml_example());
+//! ```
+//!
+//! Flattening works with maps too!
+//!
+//! ```rust
+//! use serde::Deserialize;
+//! use toml_example::TomlExample;
+//! # use std::collections::HashMap;
+//!
+//! #[derive(TomlExample, Deserialize)]
+//! struct MainConfig {
+//!     #[serde(flatten)]
+//!     #[toml_example(nesting)]
+//!     nested: HashMap<String, ConfigItem>,
+//! }
+//! #[derive(TomlExample, Deserialize)]
+//! struct ConfigItem {
+//!     #[toml_example(default = false)]
+//!     enabled: bool,
+//! }
+//!
+//! let example = MainConfig::toml_example();
+//! assert!(toml::from_str::<MainConfig>(&example).is_ok());
+//! assert_eq!(example, r#"[example]
+//! enabled = false
 //!
 //! "#);
 //! ```
@@ -127,8 +171,7 @@
 //!     /// Config.b is an optional string
 //!     #[toml_example(require)]
 //!     b: Option<String>,
-//!     #[toml_example(require)]
-//!     #[toml_example(default = "third")]
+//!     #[toml_example(require, default = "third")]
 //!     c: Option<String>,
 //!     #[toml_example(skip)]
 //!     d: usize,
@@ -150,7 +193,7 @@
 //! "enum".<br>
 //! When annotating a field with `#[toml_example(default)]` it will use the
 //! [Debug](core::fmt::Debug) implementation.
-//! However for non-TOML datatypes like enums, this does not work as the value needs to be treated
+//! However for non-TOML data types like enums, this does not work as the value needs to be treated
 //! as a string in TOML. The `#[toml_example(enum)]` attribute just adds the needed quotes around
 //! the [Debug](core::fmt::Debug) implementation and can be omitted if a custom
 //! [Debug](core::fmt::Debug) already includes those.
@@ -159,8 +202,7 @@
 //! #[derive(TomlExample)]
 //! struct Config {
 //!     /// Config.priority is an enum
-//!     #[toml_example(default)]
-//!     #[toml_example(enum)]
+//!     #[toml_example(default, enum)]
 //!     priority: Priority,
 //! }
 //! #[derive(Debug, Default)]
@@ -951,8 +993,7 @@ a = 0
         #[allow(dead_code)]
         struct Config {
             /// Config.ab is an enum
-            #[toml_example(enum)]
-            #[toml_example(default)]
+            #[toml_example(enum, default)]
             ab: AB,
             /// Config.ab2 is an enum too
             #[toml_example(is_enum)]
@@ -979,6 +1020,41 @@ ab2 = "A"
 
 # Config.ab3 is an enum as well
 ab3 = "B"
+
+"#
+        );
+    }
+
+    #[test]
+    fn flatten() {
+        #[derive(TomlExample)]
+        struct ItemWrapper {
+            #[toml_example(flatten, nesting)]
+            _item: Item,
+        }
+        #[derive(TomlExample)]
+        struct Item {
+            _value: String,
+        }
+        assert_eq!(ItemWrapper::toml_example(), Item::toml_example());
+    }
+
+    #[test]
+    fn multi_attr_escaping() {
+        #[derive(TomlExample, Deserialize, PartialEq)]
+        struct ConfigWrapper {
+            #[toml_example(default = ["hello", "{nice :)\""], require)]
+            vec: Option<Vec<String>>,
+
+            #[toml_example(require, default = ["\"\\\n}])", "super (fancy\\! :-) )"])]
+            list: Option<[String; 2]>,
+        }
+
+        assert_eq!(
+            ConfigWrapper::toml_example(),
+            r#"vec = ["hello", "{nice :)\""]
+
+list = ["\"\\\n}])", "super (fancy\\! :-) )"]
 
 "#
         );

@@ -32,6 +32,7 @@ struct AttrMeta {
     require: bool,
     skip: bool,
     is_enum: bool,
+    flatten: bool,
     rename: Option<String>,
     rename_rule: case::RenameRule,
 }
@@ -42,6 +43,7 @@ struct ParsedField {
     nesting_format: Option<NestingFormat>,
     skip: bool,
     is_enum: bool,
+    flatten: bool,
     name: String,
     optional: bool,
     ty: Option<String>,
@@ -66,13 +68,34 @@ impl ParsedField {
     fn label(&self) -> String {
         match self.nesting_format {
             Some(NestingFormat::Section(NestingType::Vec)) => {
+                if self.flatten {
+                    abort!(
+                        "flatten",
+                        format!(
+                            "Only structs and maps can be flattened! \
+                            (But field `{}` is a collection)",
+                            self.name
+                        )
+                    )
+                }
                 self.prefix() + &format!("[[{}]]", self.name)
             }
             Some(NestingFormat::Section(NestingType::Dict)) => {
-                self.prefix() + &format!("[{}.{}]", self.name, self.default_key())
+                self.prefix()
+                    + &if self.flatten {
+                        format!("[{}]", self.default_key())
+                    } else {
+                        format!("[{}.{}]", self.name, self.default_key())
+                    }
             }
             Some(NestingFormat::Prefix) => "".to_string(),
-            _ => self.prefix() + &format!("[{}]", self.name),
+            _ => {
+                if self.flatten {
+                    self.prefix()
+                } else {
+                    self.prefix() + &format!("[{}]", self.name)
+                }
+            }
         }
     }
 
@@ -190,6 +213,7 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
     let mut require = false;
     let mut skip = false;
     let mut is_enum = false;
+    let mut flatten = false;
     // mut in serde feature
     #[allow(unused_mut)]
     let mut rename = None;
@@ -222,31 +246,36 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
                 #[cfg(feature = "serde")]
                 {
                     let token_str = _tokens.to_string();
-                    if token_str.starts_with("default") {
-                        if let Some((_, s)) = token_str.split_once('=') {
-                            default_source = Some(DefaultSource::SerdeDefaultFn(
-                                s.trim().trim_matches('"').into(),
-                            ));
-                        } else {
-                            default_source = Some(DefaultSource::DefaultFn(None));
-                        }
-                    }
-                    if token_str == "skip_deserializing" || token_str == "skip" {
-                        skip = true;
-                    }
-                    if token_str.starts_with("rename") {
-                        if token_str.starts_with("rename_all") {
-                            if let Some((_, s)) = token_str.split_once('=') {
-                                rename_rule = if let Ok(r) =
-                                    case::RenameRule::from_str(s.trim().trim_matches('"'))
-                                {
-                                    r
-                                } else {
-                                    abort!(&_tokens, "unsupported rename rule")
-                                }
+                    for attribute in token_str.split(find_unenclosed_char(',')).map(str::trim) {
+                        if attribute.starts_with("default") {
+                            if let Some((_, s)) = attribute.split_once('=') {
+                                default_source = Some(DefaultSource::SerdeDefaultFn(
+                                    s.trim().trim_matches('"').into(),
+                                ));
+                            } else {
+                                default_source = Some(DefaultSource::DefaultFn(None));
                             }
-                        } else if let Some((_, s)) = token_str.split_once('=') {
-                            rename = Some(s.trim().trim_matches('"').into());
+                        }
+                        if attribute == "skip_deserializing" || attribute == "skip" {
+                            skip = true;
+                        }
+                        if attribute == "flatten" {
+                            flatten = true;
+                        }
+                        if attribute.starts_with("rename") {
+                            if attribute.starts_with("rename_all") {
+                                if let Some((_, s)) = attribute.split_once('=') {
+                                    rename_rule = if let Ok(r) =
+                                        case::RenameRule::from_str(s.trim().trim_matches('"'))
+                                    {
+                                        r
+                                    } else {
+                                        abort!(&_tokens, "unsupported rename rule")
+                                    }
+                                }
+                            } else if let Some((_, s)) = attribute.split_once('=') {
+                                rename = Some(s.trim().trim_matches('"').into());
+                            }
                         }
                     }
                 }
@@ -259,30 +288,36 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
                     .unwrap_or_default() =>
             {
                 let token_str = tokens.to_string();
-                if token_str.starts_with("default") {
-                    if let Some((_, s)) = token_str.split_once('=') {
-                        default_source = Some(DefaultSource::DefaultValue(s.trim().into()));
-                    } else {
-                        default_source = Some(DefaultSource::DefaultFn(None));
-                    }
-                } else if token_str.starts_with("nesting") {
-                    if let Some((_, s)) = token_str.split_once('=') {
-                        nesting_format = match s.trim() {
-                            "prefix" => Some(NestingFormat::Prefix),
-                            "section" => Some(NestingFormat::Section(NestingType::None)),
-                            _ => abort!(&attr, "please use prefix or section for nesting derive"),
+                for attribute in token_str.split(find_unenclosed_char(',')).map(str::trim) {
+                    if attribute.starts_with("default") {
+                        if let Some((_, s)) = attribute.split_once('=') {
+                            default_source = Some(DefaultSource::DefaultValue(s.trim().into()));
+                        } else {
+                            default_source = Some(DefaultSource::DefaultFn(None));
                         }
+                    } else if attribute.starts_with("nesting") {
+                        if let Some((_, s)) = attribute.split_once('=') {
+                            nesting_format = match s.trim() {
+                                "prefix" => Some(NestingFormat::Prefix),
+                                "section" => Some(NestingFormat::Section(NestingType::None)),
+                                _ => {
+                                    abort!(&attr, "please use prefix or section for nesting derive")
+                                }
+                            }
+                        } else {
+                            nesting_format = Some(NestingFormat::Section(NestingType::None));
+                        }
+                    } else if attribute == "require" {
+                        require = true;
+                    } else if attribute == "skip" {
+                        skip = true;
+                    } else if attribute == "is_enum" || attribute == "enum" {
+                        is_enum = true;
+                    } else if attribute == "flatten" {
+                        flatten = true;
                     } else {
-                        nesting_format = Some(NestingFormat::Section(NestingType::None));
+                        abort!(&attr, format!("{} is not allowed attribute", attribute))
                     }
-                } else if token_str == "require" {
-                    require = true;
-                } else if token_str == "skip" {
-                    skip = true;
-                } else if token_str == "is_enum" || token_str == "enum" {
-                    is_enum = true;
-                } else {
-                    abort!(&attr, format!("{} is not allowed attribute", token_str))
                 }
             }
             _ => (),
@@ -296,6 +331,7 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
         require,
         skip,
         is_enum,
+        flatten,
         rename,
         rename_rule,
     }
@@ -314,6 +350,7 @@ fn parse_field(
         mut nesting_format,
         skip,
         is_enum,
+        flatten,
         rename,
         require,
         ..
@@ -342,6 +379,7 @@ fn parse_field(
         nesting_format,
         skip,
         is_enum,
+        flatten,
         name,
         optional: optional && !require,
         ty,
@@ -448,7 +486,17 @@ impl Intermediate {
                         if field.nesting_format == Some(NestingFormat::Prefix) {
                             (&mut field_example, "")
                         } else {
-                            (&mut nesting_field_example, "\n")
+                            (
+                                &mut nesting_field_example,
+                                if field.flatten
+                                    && field.nesting_format
+                                        == Some(NestingFormat::Section(NestingType::None))
+                                {
+                                    ""
+                                } else {
+                                    "\n"
+                                },
+                            )
                         };
 
                     field.push_doc_to_string(example);
@@ -572,4 +620,43 @@ fn handle_serde_default_fn_source(
         field_example.push_str(&format!(" + &format!(\"{{:?}}\",  {fn_str}(){suffix})"));
     }
     field_example.push_str("+ &r##\"\n");
+}
+
+/// A [Pattern](std::str::pattern::Pattern) to find a char that is not enclosed in quotes, braces
+/// or the like
+fn find_unenclosed_char(pat: char) -> impl FnMut(char) -> bool {
+    let mut quotes = 0;
+    let mut single_quotes = 0;
+    let mut brackets = 0;
+    let mut braces = 0;
+    let mut parenthesis = 0;
+    let mut is_escaped = false;
+    move |char| -> bool {
+        if is_escaped {
+            is_escaped = false;
+            return false;
+        } else if char == '\\' {
+            is_escaped = true;
+        } else if (quotes % 2 == 1 && char != '"') || (single_quotes % 2 == 1 && char != '\'') {
+            return false;
+        } else {
+            match char {
+                '"' => quotes += 1,
+                '\'' => single_quotes += 1,
+                '[' => brackets += 1,
+                ']' => brackets -= 1,
+                '{' => braces += 1,
+                '}' => braces -= 1,
+                '(' => parenthesis += 1,
+                ')' => parenthesis -= 1,
+                _ => {}
+            }
+        }
+        char == pat
+            && quotes % 2 == 0
+            && single_quotes % 2 == 0
+            && brackets == 0
+            && braces == 0
+            && parenthesis == 0
+    }
 }
