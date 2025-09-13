@@ -1125,6 +1125,30 @@ ab3 = "B"
     }
 
     #[test]
+    fn flatten_order() {
+        #[derive(TomlExample)]
+        struct Outer {
+            #[toml_example(nesting)]
+            _nested: Item,
+            #[toml_example(flatten, nesting)]
+            _flattened: Item,
+        }
+        #[derive(TomlExample)]
+        struct Item {
+            _value: String,
+        }
+        assert_eq!(
+            Outer::toml_example(),
+            r#"_value = ""
+
+[_nested]
+_value = ""
+
+"#
+        );
+    }
+
+    #[test]
     fn multi_attr_escaping() {
         #[derive(TomlExample, Deserialize, PartialEq)]
         struct ConfigWrapper {
