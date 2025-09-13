@@ -66,6 +66,39 @@ impl ParsedField {
     }
 
     fn label(&self) -> String {
+        let label = match self.nesting_format {
+            Some(NestingFormat::Section(NestingType::Dict)) => {
+                if self.flatten {
+                    self.default_key()
+                } else {
+                    format!("{}.{}", self.name, self.default_key())
+                }
+            }
+            Some(NestingFormat::Prefix) => String::new(),
+            _ => {
+                if self.flatten {
+                    String::new()
+                } else {
+                    self.name.to_string()
+                }
+            }
+        };
+        if label.is_empty() {
+            r#""""#.to_string()
+        } else {
+            format!(
+                "
+                if label.is_empty() {{
+                    \"{label}\".to_string()
+                }} else {{
+                    label.to_string() + \".\" + \"{label}\"
+                }}
+            "
+            )
+        }
+    }
+
+    fn label_format(&self) -> (&str, &str) {
         match self.nesting_format {
             Some(NestingFormat::Section(NestingType::Vec)) => {
                 if self.flatten {
@@ -78,22 +111,15 @@ impl ParsedField {
                         )
                     )
                 }
-                self.prefix() + &format!("[[{}]]", self.name)
+                ("[[", "]]")
             }
-            Some(NestingFormat::Section(NestingType::Dict)) => {
-                self.prefix()
-                    + &if self.flatten {
-                        format!("[{}]", self.default_key())
-                    } else {
-                        format!("[{}.{}]", self.name, self.default_key())
-                    }
-            }
-            Some(NestingFormat::Prefix) => "".to_string(),
+            Some(NestingFormat::Section(NestingType::Dict)) => ("[", "]"),
+            Some(NestingFormat::Prefix) => ("", ""),
             _ => {
                 if self.flatten {
-                    self.prefix()
+                    ("", "")
                 } else {
-                    self.prefix() + &format!("[{}]", self.name)
+                    ("[", "]")
                 }
             }
         }
@@ -453,10 +479,15 @@ impl Intermediate {
         Ok(quote! {
             impl toml_example::TomlExample for #struct_name {
                 fn toml_example() -> String {
-                    #struct_name::toml_example_with_prefix("", "")
+                    #struct_name::toml_example_with_prefix("", ("", ""), "")
                 }
-                fn toml_example_with_prefix(label: &str, prefix: &str) -> String {
-                    #struct_doc.to_string() + label + &#field_example_stream
+                fn toml_example_with_prefix(label: &str, label_format: (&str, &str), prefix: &str)
+                    -> String {
+                    #struct_doc.to_string()
+                        + label_format.0
+                        + label
+                        + label_format.1
+                        + &#field_example_stream
                 }
             }
         })
@@ -502,10 +533,22 @@ impl Intermediate {
                     field.push_doc_to_string(example);
                     if let Some(ref field_type) = field.ty {
                         example.push_str("\"##.to_string()");
+                        let (before, after) = field.label_format();
+                        let label_format = format!(
+                            "(\"{}{before}\", \"{after}{nesting_section_newline}\")",
+                            if field.optional && field.nesting_format != Some(NestingFormat::Prefix)
+                            {
+                                "# "
+                            } else {
+                                ""
+                            }
+                        );
                         example.push_str(&format!(
-                            " + &{field_type}::toml_example_with_prefix(\"{}{}\", \"{}\")",
+                            " + &{field_type}::toml_example_with_prefix(\
+                                &{}, {}, \"{}\"\
+                            )",
                             field.label(),
-                            nesting_section_newline,
+                            label_format,
                             field.prefix()
                         ));
                         example.push_str(" + &r##\"");

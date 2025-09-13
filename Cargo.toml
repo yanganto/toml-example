@@ -3,6 +3,7 @@ members = [
     "lib",
     "derive",
 ]
+resolver = "2"
 
 [workspace.package]
 version = "0.15.0"
