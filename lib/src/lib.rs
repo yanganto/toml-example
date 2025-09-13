@@ -961,6 +961,63 @@ _value = 0
     }
 
     #[test]
+    fn recursive_nesting_and_flatten() {
+        #[derive(TomlExample, Default, Debug, Deserialize, PartialEq)]
+        struct Outer {
+            #[toml_example(nesting)]
+            middle: Middle,
+            #[toml_example(default = false)]
+            /// Some toggle
+            flag: bool,
+        }
+        #[derive(TomlExample, Default, Debug, Deserialize, PartialEq)]
+        struct Middle {
+            #[serde(flatten)]
+            #[toml_example(nesting)]
+            /// Values of [Inner] are flattened into [Middle]
+            inner: Inner,
+        }
+        #[derive(TomlExample, Default, Debug, Deserialize, PartialEq)]
+        struct Inner {
+            #[toml_example(nesting)]
+            /// [Extra] is flattened into [Middle]
+            extra: Extra,
+            /// `value` is defined below `extra`, but shown above
+            value: usize,
+        }
+        #[derive(TomlExample, Debug, Deserialize, PartialEq)]
+        #[toml_example(default)]
+        struct Extra {
+            name: String,
+        }
+        impl Default for Extra {
+            fn default() -> Self {
+                Self {
+                    name: String::from("ferris"),
+                }
+            }
+        }
+        let example = Outer::toml_example();
+        assert_eq!(toml::from_str::<Outer>(&example).unwrap(), Outer::default());
+        assert_eq!(
+            example,
+            r#"# Some toggle
+flag = false
+
+[middle]
+# Values of [Inner] are flattened into [Middle]
+# `value` is defined below `extra`, but shown above
+value = 0
+
+# [Extra] is flattened into [Middle]
+[middle.extra]
+name = "ferris"
+
+"#
+        );
+    }
+
+    #[test]
     fn require() {
         #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
         #[allow(dead_code)]
