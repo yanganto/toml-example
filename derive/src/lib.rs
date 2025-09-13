@@ -84,7 +84,7 @@ impl ParsedField {
             }
         };
         if label.is_empty() {
-            r#""""#.to_string()
+            String::from("label")
         } else {
             format!(
                 "
@@ -483,11 +483,12 @@ impl Intermediate {
                 }
                 fn toml_example_with_prefix(label: &str, label_format: (&str, &str), prefix: &str)
                     -> String {
-                    #struct_doc.to_string()
-                        + label_format.0
-                        + label
-                        + label_format.1
-                        + &#field_example_stream
+                    let wrapped_label = if label_format.0.is_empty() {
+                        String::new()
+                    } else {
+                        label_format.0.to_string() + label + label_format.1
+                    };
+                    #struct_doc.to_string() + &wrapped_label + &#field_example_stream
                 }
             }
         })
