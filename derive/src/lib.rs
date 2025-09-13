@@ -517,18 +517,19 @@ impl Intermediate {
                     let (example, nesting_section_newline) =
                         if field.nesting_format == Some(NestingFormat::Prefix) {
                             (&mut field_example, "")
-                        } else {
+                        } else if field.flatten {
                             (
-                                &mut nesting_field_example,
-                                if field.flatten
-                                    && field.nesting_format
-                                        == Some(NestingFormat::Section(NestingType::None))
+                                &mut field_example,
+                                if field.nesting_format
+                                    == Some(NestingFormat::Section(NestingType::None))
                                 {
                                     ""
                                 } else {
                                     "\n"
                                 },
                             )
+                        } else {
+                            (&mut nesting_field_example, "\n")
                         };
 
                     field.push_doc_to_string(example);
