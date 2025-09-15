@@ -933,6 +933,91 @@ port = 80
     }
 
     #[test]
+    fn recursive_nesting() {
+        #[derive(TomlExample, Default, Debug, Deserialize, PartialEq)]
+        struct Outer {
+            #[toml_example(nesting)]
+            _middle: Middle,
+        }
+        #[derive(TomlExample, Default, Debug, Deserialize, PartialEq)]
+        struct Middle {
+            #[toml_example(nesting)]
+            _inner: Inner,
+        }
+        #[derive(TomlExample, Default, Debug, Deserialize, PartialEq)]
+        struct Inner {
+            _value: usize,
+        }
+        let example = Outer::toml_example();
+        assert_eq!(toml::from_str::<Outer>(&example).unwrap(), Outer::default());
+        assert_eq!(
+            example,
+            r#"[_middle]
+[_middle._inner]
+_value = 0
+
+"#
+        );
+    }
+
+    #[test]
+    fn recursive_nesting_and_flatten() {
+        #[derive(TomlExample, Default, Debug, Deserialize, PartialEq)]
+        struct Outer {
+            #[toml_example(nesting)]
+            middle: Middle,
+            #[toml_example(default = false)]
+            /// Some toggle
+            flag: bool,
+        }
+        #[derive(TomlExample, Default, Debug, Deserialize, PartialEq)]
+        struct Middle {
+            #[serde(flatten)]
+            #[toml_example(nesting)]
+            /// Values of [Inner] are flattened into [Middle]
+            inner: Inner,
+        }
+        #[derive(TomlExample, Default, Debug, Deserialize, PartialEq)]
+        struct Inner {
+            #[toml_example(nesting)]
+            /// [Extra] is flattened into [Middle]
+            extra: Extra,
+            /// `value` is defined below `extra`, but shown above
+            value: usize,
+        }
+        #[derive(TomlExample, Debug, Deserialize, PartialEq)]
+        #[toml_example(default)]
+        struct Extra {
+            name: String,
+        }
+        impl Default for Extra {
+            fn default() -> Self {
+                Self {
+                    name: String::from("ferris"),
+                }
+            }
+        }
+        let example = Outer::toml_example();
+        assert_eq!(toml::from_str::<Outer>(&example).unwrap(), Outer::default());
+        assert_eq!(
+            example,
+            r#"# Some toggle
+flag = false
+
+[middle]
+# Values of [Inner] are flattened into [Middle]
+# `value` is defined below `extra`, but shown above
+value = 0
+
+# [Extra] is flattened into [Middle]
+[middle.extra]
+name = "ferris"
+
+"#
+        );
+    }
+
+    #[test]
     fn require() {
         #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
         #[allow(dead_code)]
@@ -1037,6 +1122,30 @@ ab3 = "B"
             _value: String,
         }
         assert_eq!(ItemWrapper::toml_example(), Item::toml_example());
+    }
+
+    #[test]
+    fn flatten_order() {
+        #[derive(TomlExample)]
+        struct Outer {
+            #[toml_example(nesting)]
+            _nested: Item,
+            #[toml_example(flatten, nesting)]
+            _flattened: Item,
+        }
+        #[derive(TomlExample)]
+        struct Item {
+            _value: String,
+        }
+        assert_eq!(
+            Outer::toml_example(),
+            r#"_value = ""
+
+[_nested]
+_value = ""
+
+"#
+        );
     }
 
     #[test]

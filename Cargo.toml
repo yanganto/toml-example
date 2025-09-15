@@ -3,11 +3,12 @@ members = [
     "lib",
     "derive",
 ]
+resolver = "2"
 
 [workspace.package]
 version = "0.15.0"
 edition = "2021"
-authors = ["Antonio Yang <yanganto@gmail.com>"]
+authors = ["Antonio Yang <yanganto@gmail.com>", "faervan <faervan@proton.me>"]
 license = "MIT"
 description = "A lib help generate toml example"
 repository = "https://github.com/yanganto/toml-example"
