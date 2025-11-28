@@ -1289,7 +1289,7 @@ a = ""
         #[allow(dead_code)]
         struct Foo {
             /// Option<Vec<String>>, with small default values
-            #[toml_example(default = ["a", "b", c])]
+            #[toml_example(default = ["a", "b", "c"])]
             array_value_example: Option<Vec<String>>,
 
             /// Option<Vec<String>>, with long default values
@@ -1307,7 +1307,7 @@ a = ""
         assert_eq!(
             Foo::toml_example(),
             r#"# Option<Vec<String>>, with small default values
-# array_value_example = ["a", "b", c]
+# array_value_example = ["a", "b", "c"]
 
 # Option<Vec<String>>, with long default values
 # array_long_value_example = ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",

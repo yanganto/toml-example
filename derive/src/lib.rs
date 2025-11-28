@@ -568,7 +568,11 @@ impl Intermediate {
                     match field.default {
                         DefaultSource::DefaultValue(default) => {
                             field_example.push_str(" = ");
-                            field_example.push_str(&default);
+                            if field.optional {
+                                field_example.push_str(&default.replace('\n', "\n# "));
+                            } else {
+                                field_example.push_str(&default);
+                            }
                             field_example.push('\n');
                         }
                         DefaultSource::DefaultFn(None) => match struct_default {
