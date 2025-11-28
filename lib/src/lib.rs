@@ -1282,4 +1282,43 @@ a = ""
 "#
         );
     }
+
+    #[test]
+    fn optional_long_vector_field() {
+        #[derive(TomlExample)]
+        #[allow(dead_code)]
+        struct Foo {
+            /// Option<Vec<String>>, with small default values
+            #[toml_example(default = ["a", "b", c])]
+            array_value_example: Option<Vec<String>>,
+
+            /// Option<Vec<String>>, with long default values
+            #[toml_example(default = ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", 
+                "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", 
+                "ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+            ])]
+            array_long_value_example: Option<Vec<String>>,
+
+            /// Option<Vec<String>>, with a long default value but no space after comma
+            #[toml_example(default = ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"])]
+            array_long_value_no_space_example: Option<Vec<String>>,
+        }
+        assert_eq!(
+            Foo::toml_example(),
+            r#"# Option<Vec<String>>, with small default values
+# array_value_example = ["a", "b", c]
+
+# Option<Vec<String>>, with long default values
+# array_long_value_example = ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+# "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+# "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+# "ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"]
+
+# Option<Vec<String>>, with a long default value but no space after comma
+# array_long_value_no_space_example = ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"]
+
+"#
+        );
+    }
 }
