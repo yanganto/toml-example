@@ -251,7 +251,7 @@ c = "third"
 ```
 
 ## Why TOML is good for program configuration file
-There are serveral common config file solution: INI, JSON, YAML, TOML.
+There are several common config file solutions: INI, JSON, YAML, TOML.
 - INI is legacy and no nesting support, and the comment char is not designed at first, so some parser will use `;` or `#`.
 - JSON does not support documentation. It is efficient for data exchange, but configuration files should include documentation, so it is not good for this use case.
 - YAML is too greedy on covering derserialize issue, so it is too complex for a confiture and vulnerable, for example:
