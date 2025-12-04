@@ -250,6 +250,15 @@ c = "third"
 
 ```
 
+## Why TOML is good for programe configure file
+There are serveral common config file solution: INI, JSON, YAML, TOML.
+- INI is legacy and no nesting support, and the comment char is not designed at first, so some parser will use `;` or `#`.
+- JSON is not support document, it is efficient for data exchange, but there should be documentation in configure, so it not good for this using case.
+- YAML is too greedy on covering derserialize issue, so it is too complex for a confiture and vulnerable, for example:
+  -  `y` ambiguously stand for "y" or true
+  - [CVE-2019-11253](https://github.com/kubernetes/kubernetes/issues/83253)
+- TOML is good for now, and easy to write and read for humman, that is a real need for confiture file.
+
 [crates-badge]: https://img.shields.io/crates/v/toml-example.svg
 [crate-url]: https://crates.io/crates/toml-example
 [mit-badge]: https://img.shields.io/badge/license-MIT-blue.svg
