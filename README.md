@@ -250,6 +250,15 @@ c = "third"
 
 ```
 
+## Why TOML is good for program configuration file
+There are several common config file solutions: INI, JSON, YAML, TOML.
+- INI is legacy and no nesting support, and the comment char is not designed at first, so some parser will use `;` or `#`.
+- JSON does not support documentation. It is efficient for data exchange, but configuration files should include documentation, so it is not good for this use case.
+- YAML is too greedy on covering derserialize issue, so it is too complex for a configuration and vulnerable, for example:
+  -  `y` ambiguously stand for "y" or true
+  - [CVE-2019-11253](https://github.com/kubernetes/kubernetes/issues/83253)
+- TOML is good for now, and easy to write and read for human, that is a real need for configuration file.
+
 [crates-badge]: https://img.shields.io/crates/v/toml-example.svg
 [crate-url]: https://crates.io/crates/toml-example
 [mit-badge]: https://img.shields.io/badge/license-MIT-blue.svg
