@@ -131,7 +131,7 @@ dependencies = [
 
 [[package]]
 name = "toml-example"
-version = "0.16.1"
+version = "0.16.2"
 dependencies = [
  "serde",
  "serde_derive",
@@ -141,7 +141,7 @@ dependencies = [
 
 [[package]]
 name = "toml-example-derive"
-version = "0.16.1"
+version = "0.16.2"
 dependencies = [
  "proc-macro-error2",
  "proc-macro2",
