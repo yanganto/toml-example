@@ -270,6 +270,31 @@ b = ""
     }
 
     #[test]
+    fn hinden_doc() {
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Config {
+            /// Config.a should be a number
+            // This doc will be hiddend not in the example
+            a: usize,
+
+            // NOTE: This note is only shown in the code
+            /// Config.b should be a string
+            b: String,
+        }
+        assert_eq!(
+            Config::toml_example(),
+            r#"# Config.a should be a number
+a = 0
+
+# Config.b should be a string
+b = ""
+
+"#
+        );
+    }
+
+    #[test]
     fn option() {
         #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
         #[allow(dead_code)]
