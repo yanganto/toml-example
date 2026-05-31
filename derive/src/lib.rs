@@ -170,7 +170,7 @@ fn default_value(ty: String) -> String {
     .to_string()
 }
 
-/// return type and unwrap with Option and Vec; or return the value type of HashMap and BTreeMap
+/// return type and unwrap with Option, Vec, HashSet, BTreeSet; or return the value type of HashMap and BTreeMap
 fn parse_type(
     ty: &Type,
     default: &mut String,
@@ -194,7 +194,7 @@ fn parse_type(
                         r#type = parse_type(ty, default, &mut false, nesting_format);
                     }
                 }
-            } else if id == "Vec" {
+            } else if id == "Vec" || id == "HashSet" || id == "BTreeSet" {
                 if nesting_format.is_some() {
                     *nesting_format = Some(NestingFormat::Section(NestingType::Vec));
                 }
