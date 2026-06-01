@@ -354,6 +354,36 @@ c = [ 0, ]
     }
 
     #[test]
+    fn hashset_btreeset() {
+        use std::collections::{BTreeSet, HashSet};
+
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        struct Config {
+            /// Config.a is a set of string
+            a: HashSet<String>,
+            /// Config.b is a set of number
+            b: BTreeSet<usize>,
+            /// Config.c is optional
+            c: Option<HashSet<String>>,
+        }
+        assert_eq!(
+            Config::toml_example(),
+            r#"# Config.a is a set of string
+a = [ "", ]
+
+# Config.b is a set of number
+b = [ 0, ]
+
+# Config.c is optional
+# c = [ "", ]
+
+"#
+        );
+        assert!(toml::from_str::<Config>(&Config::toml_example()).is_ok())
+    }
+
+    #[test]
     fn struct_doc() {
         /// Config is to arrange something or change the controls on a computer or other device
         /// so that it can be used in a particular way
