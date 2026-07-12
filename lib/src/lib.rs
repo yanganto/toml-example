@@ -411,6 +411,37 @@ a = 0
     }
 
     #[test]
+    fn struct_doc_skip() {
+        #[derive(TomlExample)]
+        #[toml_example(doc_skip_prefix = "\\")]
+        #[allow(dead_code)]
+        struct Config {
+            /// This comment will be shown.
+            /// \ This comment is only relevant to the
+            /// \ developers and is hidden in user examples.
+            /// no-doc: this was only specified for b
+            a: u8,
+            #[toml_example(doc_skip_prefix = "no-doc:")]
+            /// \ This is a dev comment.
+            /// This is a toml comment.
+            /// \ Dev comment again.
+            /// no-doc: No toml doc here
+            b: u8,
+        }
+        assert_eq!(
+            Config::toml_example(),
+            r#"# This comment will be shown.
+# no-doc: this was only specified for b
+a = 0
+
+# This is a toml comment.
+b = 0
+
+"#
+        );
+    }
+
+    #[test]
     fn serde_default() {
         fn default_a() -> usize {
             7
