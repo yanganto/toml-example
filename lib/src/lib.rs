@@ -188,7 +188,7 @@
 //! "#)
 //! ```
 //!
-//! You can also use field less enums, but you have to annotate them with `#[toml_example(enum)]` or
+//! You can also use fieldless enums, but you have to annotate them with `#[toml_example(enum)]` or
 //! `#[toml_example(is_enum)]` if you mind the keyword highlight you likely get when writing
 //! "enum".<br>
 //! When annotating a field with `#[toml_example(default)]` it will use the
@@ -224,7 +224,7 @@
 //! ```rust
 //! # use toml_example::TomlExample;
 //! #[derive(TomlExample)]
-//! // We have to use double backslash here, else it will fuck up the AST
+//! // We have to use double backslash here, else it will break the AST
 //! #[toml_example(doc_skip_prefix = "\\")]
 //! struct Config {
 //!     /// \ This comment is not added to the TOML
@@ -241,6 +241,24 @@
 //!
 //! ## This is a TOML comment
 //! b = ""
+//!
+//! "#)
+//! ```
+//!
+//! You can use `#[toml_example(help = "...")]` to override the doc string with a custom help
+//! text for the TOML example. This works on both struct fields and structs themselves.
+//! When `help` is set, the doc string is ignored and the help text is used as the TOML comment.
+//! ```rust
+//! use toml_example::TomlExample;
+//! #[derive(TomlExample)]
+//! struct Config {
+//!     /// Config.a should be a number
+//!     #[toml_example(help = "The port number to listen on")]
+//!     a: usize,
+//! }
+//! assert_eq!(Config::toml_example(),
+//! r#"# The port number to listen on
+//! a = 0
 //!
 //! "#)
 //! ```
@@ -1430,6 +1448,71 @@ a = ""
 
 # Option<Vec<String>>, with a long default value but no space after comma
 # array_long_value_no_space_example = ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"]
+
+"#
+        );
+    }
+
+    #[test]
+    fn help() {
+        #[derive(TomlExample, Deserialize, Default, PartialEq, Debug)]
+        #[allow(dead_code)]
+        #[toml_example(help = "This is the struct help text")]
+        struct Config {
+            /// Config.a should be a number
+            #[toml_example(help = "This is the help text for a")]
+            a: usize,
+            /// Config.b should be a string
+            #[toml_example(help = r#"This is the help text for b
+Line two of help"#)]
+            b: String,
+            /// Config.c is an optional number
+            #[toml_example(help = "This is the help text for c", default = 42)]
+            c: Option<usize>,
+        }
+        assert_eq!(
+            Config::toml_example(),
+            r#"# This is the struct help text
+# This is the help text for a
+a = 0
+
+# This is the help text for b
+# Line two of help
+b = ""
+
+# This is the help text for c
+# c = 42
+
+"#
+        );
+    }
+
+    #[test]
+    fn help_with_nesting() {
+        use std::collections::HashMap;
+
+        /// Service doc string
+        #[derive(TomlExample)]
+        #[allow(dead_code)]
+        struct Service {
+            /// port doc string
+            #[toml_example(help = "Port number help text", default = 80)]
+            port: usize,
+        }
+        #[derive(TomlExample)]
+        #[allow(dead_code)]
+        struct Node {
+            /// Services doc string
+            #[toml_example(help = "Services help text", default = http, nesting)]
+            services: HashMap<String, Service>,
+        }
+        assert_eq!(
+            Node::toml_example(),
+            r#"# Services help text
+# Service doc string
+[services.http]
+# Port number help text
+port = 80
 
 "#
         );

@@ -246,6 +246,24 @@ a = ""
 b = ""
 
 "#)
+
+## Help Text
+You can use `#[toml_example(help = "...")]` to provide custom help text for the TOML example.
+When `help` is set, the doc string is ignored and the help text is used as the TOML comment instead.
+This works on both struct fields and structs themselves, and can be combined with other attributes.
+```rust
+use toml_example::TomlExample;
+#[derive(TomlExample)]
+struct Config {
+    /// Config.a should be a number
+    #[toml_example(help = "The port number to listen on", default = 8080)]
+    a: usize,
+}
+```
+```toml
+# The port number to listen on
+a = 8080
+
 ```
 
 ## More
