@@ -419,19 +419,19 @@ a = 0
             /// This comment will be shown.
             /// \ This comment is only relevant to the
             /// \ developers and is hidden in user examples.
-            /// no-doc: this was only specified for b
+            /// dev-doc: this was only specified for b
             a: u8,
-            #[toml_example(doc_skip_prefix = "no-doc:")]
+            #[toml_example(doc_skip_prefix = "dev-doc:")]
             /// \ This is a dev comment.
             /// This is a toml comment.
             /// \ Dev comment again.
-            /// no-doc: No toml doc here
+            /// dev-doc: No toml doc here
             b: u8,
         }
         assert_eq!(
             Config::toml_example(),
             r#"# This comment will be shown.
-# no-doc: this was only specified for b
+# dev-doc: this was only specified for b
 a = 0
 
 # This is a toml comment.

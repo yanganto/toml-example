@@ -330,14 +330,14 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
                                 abort!(
                                     &attr,
                                     "doc_skip_prefix expects a quoted string as value, try \
-                                    toml_example(doc_skip_prefix = \"\\skip-doc\")"
+                                    toml_example(doc_skip_prefix = \"\\dev-doc\")"
                                 )
                             }
                         } else {
                             abort!(
                                 &attr,
                                 "doc_skip_prefix expects a value, try \
-                                toml_example(doc_skip_prefix = \"\\skip-doc\")"
+                                toml_example(doc_skip_prefix = \"\\dev-doc\")"
                             )
                         }
                     } else if attribute.starts_with("default") {
