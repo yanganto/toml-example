@@ -28,6 +28,7 @@ struct Intermediate {
 struct AttrMeta {
     docs: Vec<String>,
     doc_skip_prefix: Vec<String>,
+    help: Option<String>,
     default_source: Option<DefaultSource>,
     nesting_format: Option<NestingFormat>,
     require: bool,
@@ -237,6 +238,7 @@ fn parse_type(
 fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
     let mut docs = Vec::new();
     let mut doc_skip_prefix = Vec::new();
+    let mut help = None;
     let mut default_source = None;
     let mut nesting_format = None;
     let mut require = false;
@@ -320,12 +322,9 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
                 for attribute in token_str.split(find_unenclosed_char(',')).map(str::trim) {
                     if attribute.starts_with("doc_skip_prefix") {
                         if let Some((_, s)) = attribute.split_once('=') {
-                            if let Some(s) = s
-                                .trim()
-                                .split_once('"')
-                                .and_then(|(_, s)| s.rsplit_once('"').map(|(s, _)| s))
-                            {
-                                doc_skip_prefix.push(s.replace(r#"\\"#, "\\").to_string());
+                            let s = s.trim();
+                            if let Ok(lit_str) = syn::parse_str::<syn::LitStr>(s) {
+                                doc_skip_prefix.push(lit_str.value());
                             } else {
                                 abort!(
                                     &attr,
@@ -366,6 +365,25 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
                         is_enum = true;
                     } else if attribute == "flatten" {
                         flatten = true;
+                    } else if attribute.starts_with("help") {
+                        if let Some((_, s)) = attribute.split_once('=') {
+                            let s = s.trim();
+                            if let Ok(lit_str) = syn::parse_str::<syn::LitStr>(s) {
+                                help = Some(lit_str.value());
+                            } else {
+                                abort!(
+                                    &attr,
+                                    "help expects a quoted string as value, try \
+                                    toml_example(help = \"This is a help text\")"
+                                )
+                            }
+                        } else {
+                            abort!(
+                                &attr,
+                                "help expects a value, try \
+                                toml_example(help = \"This is a help text\")"
+                            )
+                        }
                     } else {
                         abort!(&attr, format!("{} is not allowed attribute", attribute))
                     }
@@ -378,6 +396,7 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
     AttrMeta {
         docs,
         doc_skip_prefix,
+        help,
         default_source,
         nesting_format,
         require,
@@ -400,6 +419,7 @@ fn parse_field(
     let AttrMeta {
         docs,
         doc_skip_prefix,
+        help,
         default_source,
         mut nesting_format,
         skip,
@@ -410,6 +430,7 @@ fn parse_field(
         ..
     } = parse_attrs(&field.attrs);
     all_doc_skip_prefix.extend(doc_skip_prefix);
+    let docs = help.map(|h| help_to_docs(&h)).unwrap_or(docs);
     let ty = parse_type(
         &field.ty,
         &mut default_value,
@@ -456,6 +477,18 @@ fn push_doc_string(example: &mut String, docs: &[String], doc_skip_prefix: &[Str
     }
 }
 
+fn help_to_docs(help: &str) -> Vec<String> {
+    help.lines()
+        .map(|l| {
+            if l.is_empty() {
+                String::new()
+            } else {
+                format!(" {}", l)
+            }
+        })
+        .collect()
+}
+
 #[proc_macro_derive(TomlExample, attributes(toml_example))]
 #[proc_macro_error]
 pub fn derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -478,6 +511,7 @@ impl Intermediate {
         let AttrMeta {
             docs,
             doc_skip_prefix,
+            help,
             default_source,
             rename_rule,
             ..
@@ -485,6 +519,7 @@ impl Intermediate {
 
         let struct_doc = {
             let mut doc = String::new();
+            let docs = help.as_ref().map(|h| help_to_docs(h)).unwrap_or(docs);
             push_doc_string(&mut doc, &docs, &doc_skip_prefix);
             doc
         };
