@@ -218,7 +218,23 @@ priority = "Important"
 "#)
 ```
 
-## Ignoring Comments
+## Ignoring Comments / Developer Only Comment / Help Text
+We have several ways to handle a mix of toml examples for the end user, and let some documents show for the developer only.  Although the crate does not forbid using these ways at the same time, it is good to just use one and keep your code base simple.
+You can check out the issue [#75](https://github.com/yanganto/toml-example/issues/75) to learn more about these.
+
+### Using Rust native features
+We can write some doc with a feature, as follows.
+`#[cfg_attr(feature = "dev-docs", doc = "This paragraph only appears when `dev-docs` feature is enabled.")]`.
+Then, the doc can be shown only when the feature enabled.
+```
+# Multiple features
+cargo doc --features "dev-docs"
+
+# All features
+cargo doc --all-features
+```
+
+### Using `#[toml_example(doc_skip_prefix = "...")]`
 Normal Rust comments (the ones beginning with `//` or those: `/**/`) are not included in the TOML example.
 
 Rust doc comments can be excluded from the TOML example by adding a `#[toml_example(doc_skip_prefix
@@ -246,8 +262,9 @@ a = ""
 b = ""
 
 "#)
+```
 
-## Help Text
+### Using `#[toml_example(help = "...")]`
 You can use `#[toml_example(help = "...")]` to provide custom help text for the TOML example.
 When `help` is set, the doc string is ignored and the help text is used as the TOML comment instead.
 This works on both struct fields and structs themselves, and can be combined with other attributes.

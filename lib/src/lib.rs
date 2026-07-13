@@ -188,7 +188,7 @@
 //! "#)
 //! ```
 //!
-//! You can also use fieldless enums, but you have to annotate them with `#[toml_example(enum)]` or
+//! You can also use field less enums, but you have to annotate them with `#[toml_example(enum)]` or
 //! `#[toml_example(is_enum)]` if you mind the keyword highlight you likely get when writing
 //! "enum".<br>
 //! When annotating a field with `#[toml_example(default)]` it will use the
@@ -224,7 +224,7 @@
 //! ```rust
 //! # use toml_example::TomlExample;
 //! #[derive(TomlExample)]
-//! // We have to use double backslash here, else it will break the AST
+//! // We have to use double backslash here, else it will fuck up the AST
 //! #[toml_example(doc_skip_prefix = "\\")]
 //! struct Config {
 //!     /// \ This comment is not added to the TOML
