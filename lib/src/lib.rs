@@ -188,7 +188,7 @@
 //! "#)
 //! ```
 //!
-//! You can also use fieldless enums, but you have to annotate them with `#[toml_example(enum)]` or
+//! You can also use field less enums, but you have to annotate them with `#[toml_example(enum)]` or
 //! `#[toml_example(is_enum)]` if you mind the keyword highlight you likely get when writing
 //! "enum".<br>
 //! When annotating a field with `#[toml_example(default)]` it will use the
@@ -214,6 +214,33 @@
 //! assert_eq!(Config::toml_example(),
 //! r#"# Config.priority is an enum
 //! priority = "Important"
+//!
+//! "#)
+//! ```
+//!
+//! Rust comments can be excluded from the TOML example by adding a `#[toml_example(doc_skip_prefix
+//! = "prefix")]` attribute and then prefixing every comment line that should not be included in the
+//! TOML example with the specified prefix:
+//! ```rust
+//! # use toml_example::TomlExample;
+//! #[derive(TomlExample)]
+//! // We have to use double backslash here, else it will fuck up the AST
+//! #[toml_example(doc_skip_prefix = "\\")]
+//! struct Config {
+//!     /// \ This comment is not added to the TOML
+//!     /// This comment is added to the TOML
+//!     a: String,
+//!     #[toml_example(doc_skip_prefix = "dev-doc:")]
+//!     /// This is a TOML comment
+//!     /// dev-doc: We can add additional prefixes.
+//!     b: String,
+//! }
+//! assert_eq!(Config::toml_example(),
+//! r#"# This comment is added to the TOML
+//! a = ""
+//!
+//! ## This is a TOML comment
+//! b = ""
 //!
 //! "#)
 //! ```
@@ -408,6 +435,37 @@ a = 0
             toml::from_str::<Config>(&Config::toml_example()).unwrap(),
             Config::default()
         )
+    }
+
+    #[test]
+    fn struct_doc_skip() {
+        #[derive(TomlExample)]
+        #[toml_example(doc_skip_prefix = "\\")]
+        #[allow(dead_code)]
+        struct Config {
+            /// This comment will be shown.
+            /// \ This comment is only relevant to the
+            /// \ developers and is hidden in user examples.
+            /// dev-doc: this was only specified for b
+            a: u8,
+            #[toml_example(doc_skip_prefix = "dev-doc:")]
+            /// \ This is a dev comment.
+            /// This is a toml comment.
+            /// \ Dev comment again.
+            /// dev-doc: No toml doc here
+            b: u8,
+        }
+        assert_eq!(
+            Config::toml_example(),
+            r#"# This comment will be shown.
+# dev-doc: this was only specified for b
+a = 0
+
+# This is a toml comment.
+b = 0
+
+"#
+        );
     }
 
     #[test]

@@ -27,6 +27,7 @@ struct Intermediate {
 
 struct AttrMeta {
     docs: Vec<String>,
+    doc_skip_prefix: Vec<String>,
     default_source: Option<DefaultSource>,
     nesting_format: Option<NestingFormat>,
     require: bool,
@@ -39,6 +40,7 @@ struct AttrMeta {
 
 struct ParsedField {
     docs: Vec<String>,
+    doc_skip_prefix: Vec<String>,
     default: DefaultSource,
     nesting_format: Option<NestingFormat>,
     skip: bool,
@@ -51,7 +53,7 @@ struct ParsedField {
 
 impl ParsedField {
     fn push_doc_to_string(&self, s: &mut String) {
-        push_doc_string(s, &self.docs);
+        push_doc_string(s, &self.docs, &self.doc_skip_prefix);
     }
 
     // Provide a default key for map-like example
@@ -234,6 +236,7 @@ fn parse_type(
 
 fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
     let mut docs = Vec::new();
+    let mut doc_skip_prefix = Vec::new();
     let mut default_source = None;
     let mut nesting_format = None;
     let mut require = false;
@@ -315,7 +318,29 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
             {
                 let token_str = tokens.to_string();
                 for attribute in token_str.split(find_unenclosed_char(',')).map(str::trim) {
-                    if attribute.starts_with("default") {
+                    if attribute.starts_with("doc_skip_prefix") {
+                        if let Some((_, s)) = attribute.split_once('=') {
+                            if let Some(s) = s
+                                .trim()
+                                .split_once('"')
+                                .and_then(|(_, s)| s.rsplit_once('"').map(|(s, _)| s))
+                            {
+                                doc_skip_prefix.push(s.replace(r#"\\"#, "\\").to_string());
+                            } else {
+                                abort!(
+                                    &attr,
+                                    "doc_skip_prefix expects a quoted string as value, try \
+                                    toml_example(doc_skip_prefix = \"\\dev-doc\")"
+                                )
+                            }
+                        } else {
+                            abort!(
+                                &attr,
+                                "doc_skip_prefix expects a value, try \
+                                toml_example(doc_skip_prefix = \"\\dev-doc\")"
+                            )
+                        }
+                    } else if attribute.starts_with("default") {
                         if let Some((_, s)) = attribute.split_once('=') {
                             default_source = Some(DefaultSource::DefaultValue(s.trim().into()));
                         } else {
@@ -352,6 +377,7 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
 
     AttrMeta {
         docs,
+        doc_skip_prefix,
         default_source,
         nesting_format,
         require,
@@ -364,6 +390,7 @@ fn parse_attrs(attrs: &[Attribute]) -> AttrMeta {
 }
 
 fn parse_field(
+    mut all_doc_skip_prefix: Vec<String>,
     struct_default: Option<&DefaultSource>,
     field: &Field,
     rename_rule: case::RenameRule,
@@ -372,6 +399,7 @@ fn parse_field(
     let mut optional = false;
     let AttrMeta {
         docs,
+        doc_skip_prefix,
         default_source,
         mut nesting_format,
         skip,
@@ -381,6 +409,7 @@ fn parse_field(
         require,
         ..
     } = parse_attrs(&field.attrs);
+    all_doc_skip_prefix.extend(doc_skip_prefix);
     let ty = parse_type(
         &field.ty,
         &mut default_value,
@@ -401,6 +430,7 @@ fn parse_field(
     };
     ParsedField {
         docs,
+        doc_skip_prefix: all_doc_skip_prefix,
         default,
         nesting_format,
         skip,
@@ -412,8 +442,14 @@ fn parse_field(
     }
 }
 
-fn push_doc_string(example: &mut String, docs: &[String]) {
+fn push_doc_string(example: &mut String, docs: &[String], doc_skip_prefix: &[String]) {
     for doc in docs.iter() {
+        if doc_skip_prefix
+            .iter()
+            .any(|prefix| doc.trim().starts_with(prefix))
+        {
+            continue;
+        }
         example.push('#');
         example.push_str(doc);
         example.push('\n');
@@ -441,6 +477,7 @@ impl Intermediate {
 
         let AttrMeta {
             docs,
+            doc_skip_prefix,
             default_source,
             rename_rule,
             ..
@@ -448,7 +485,7 @@ impl Intermediate {
 
         let struct_doc = {
             let mut doc = String::new();
-            push_doc_string(&mut doc, &docs);
+            push_doc_string(&mut doc, &docs, &doc_skip_prefix);
             doc
         };
 
@@ -458,7 +495,8 @@ impl Intermediate {
             abort!(ident, "TomlExample derive only use for struct")
         };
 
-        let field_example = Self::parse_field_examples(ident, default_source, fields, rename_rule);
+        let field_example =
+            Self::parse_field_examples(ident, doc_skip_prefix, default_source, fields, rename_rule);
 
         Ok(Intermediate {
             struct_name,
@@ -496,6 +534,7 @@ impl Intermediate {
 
     fn parse_field_examples(
         struct_ty: Ident,
+        doc_skip_prefix: Vec<String>,
         struct_default: Option<DefaultSource>,
         fields: &Fields,
         rename_rule: case::RenameRule,
@@ -505,7 +544,12 @@ impl Intermediate {
 
         if let Named(named_fields) = fields {
             for f in named_fields.named.iter() {
-                let field = parse_field(struct_default.as_ref(), f, rename_rule);
+                let field = parse_field(
+                    doc_skip_prefix.clone(),
+                    struct_default.as_ref(),
+                    f,
+                    rename_rule,
+                );
                 if field.skip {
                     continue;
                 }
